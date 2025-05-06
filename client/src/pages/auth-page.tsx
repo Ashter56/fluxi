@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { useAuth } from "@/hooks/auth-provider";
 import { Redirect } from "wouter";
 import { z } from "zod";
@@ -157,13 +157,19 @@ function LoginForm({ onSuccess, isPending }: { onSuccess: () => void, isPending:
       form.reset();
       onSuccess();
     } catch (error) {
+      console.error("Login error:", error);
       // Error is handled in the mutation
     }
   }
 
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    form.handleSubmit(onSubmit)(e);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleFormSubmit} className="space-y-4">
         <FormField
           control={form.control}
           name="username"
@@ -223,13 +229,19 @@ function RegisterForm({ onSuccess, isPending }: { onSuccess: () => void, isPendi
       form.reset();
       onSuccess();
     } catch (error) {
+      console.error("Registration error:", error);
       // Error is handled in the mutation
     }
   }
 
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    form.handleSubmit(onSubmit)(e);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleFormSubmit} className="space-y-4">
         <FormField
           control={form.control}
           name="displayName"
