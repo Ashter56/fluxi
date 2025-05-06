@@ -9,19 +9,19 @@ import {
   insertLikeSchema,
   taskStatus
 } from "@shared/schema";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Current user helper (mock authentication for now)
-  // In a real app, this would be handled by middleware and sessions
-  let currentUserId = 3; // Default to David's user ID (for demo)
+  // Set up authentication
+  setupAuth(app);
   
   // Users endpoints
   app.get("/api/users/current", async (req: Request, res: Response) => {
-    const user = await storage.getUser(currentUserId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
     }
     
+    const user = req.user;
     // Remove password before sending
     const { password, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
@@ -63,13 +63,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tasks", async (req: Request, res: Response) => {
     const tasks = await storage.getTasks();
     
-    // Add "liked" status for current user
-    const tasksWithLikeStatus = await Promise.all(
-      tasks.map(async (task) => {
-        const liked = await storage.getLike(currentUserId, task.id);
-        return { ...task, liked: !!liked };
-      })
-    );
+    // Add "liked" status for current user if authenticated
+    let tasksWithLikeStatus = tasks;
+    
+    if (req.isAuthenticated() && req.user) {
+      tasksWithLikeStatus = await Promise.all(
+        tasks.map(async (task) => {
+          const liked = await storage.getLike(req.user!.id, task.id);
+          return { ...task, liked: !!liked };
+        })
+      );
+    } else {
+      // No authenticated user, no likes
+      tasksWithLikeStatus = tasks.map(task => ({ ...task, liked: false }));
+    }
     
     // Sort tasks: newest first
     const sortedTasks = tasksWithLikeStatus.sort(

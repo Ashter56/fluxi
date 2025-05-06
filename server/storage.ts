@@ -5,11 +5,17 @@ import {
   likes, type Like, type InsertLike,
   type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, count, desc, SQL, sql } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Task methods
@@ -35,165 +41,150 @@ export interface IStorage {
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(): Promise<number>;
+  
+  // Session store for authentication
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private tasks: Map<number, Task>;
-  private comments: Map<number, Comment>;
-  private likes: Map<number, Like>;
-  private userCurrentId: number;
-  private taskCurrentId: number;
-  private commentCurrentId: number;
-  private likeCurrentId: number;
-  
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
   constructor() {
-    this.users = new Map();
-    this.tasks = new Map();
-    this.comments = new Map();
-    this.likes = new Map();
-    this.userCurrentId = 1;
-    this.taskCurrentId = 1;
-    this.commentCurrentId = 1;
-    this.likeCurrentId = 1;
-    
-    // Add some demo users
-    const demoUsers: InsertUser[] = [
-      {
-        username: "jane",
-        password: "password",
-        displayName: "Jane Smith",
-        avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330",
-        bio: "UI/UX Designer",
-      },
-      {
-        username: "alex",
-        password: "password",
-        displayName: "Alex Johnson",
-        avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
-        bio: "Product Manager",
-      },
-      {
-        username: "david",
-        password: "password",
-        displayName: "David Miller",
-        avatarUrl: "https://images.unsplash.com/photo-1633332755192-727a05c4013d",
-        bio: "Product Designer • Task Management Enthusiast",
-      }
-    ];
-    
-    demoUsers.forEach(user => this.createUser(user));
+    const PostgresSessionStore = connectPg(session);
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true,
+      tableName: 'session'
+    });
   }
-  
+
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
   
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
-    const taskList = Array.from(this.tasks.values());
+    const taskList = await db.select().from(tasks);
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const task = this.tasks.get(id);
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
-    const userTasks = Array.from(this.tasks.values()).filter(
-      task => task.userId === userId
-    );
+    const userTasks = await db.select().from(tasks).where(eq(tasks.userId, userId));
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
-    const id = this.taskCurrentId++;
-    const now = new Date();
-    const task: Task = { ...insertTask, id, createdAt: now };
-    this.tasks.set(id, task);
+    const [task] = await db.insert(tasks).values({
+      ...insertTask,
+      status: insertTask.status as TaskStatus
+    }).returning();
     return task;
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
+    const update = { ...taskUpdate };
+    if (update.status) {
+      update.status = update.status as TaskStatus;
+    }
     
-    const updatedTask = { ...task, ...taskUpdate };
-    this.tasks.set(id, updatedTask);
+    const [updatedTask] = await db
+      .update(tasks)
+      .set(update)
+      .where(eq(tasks.id, id))
+      .returning();
+    
     return updatedTask;
   }
   
   async deleteTask(id: number): Promise<boolean> {
-    if (!this.tasks.has(id)) return false;
+    // Delete associated comments
+    await db.delete(comments).where(eq(comments.taskId, id));
     
-    // Delete associated comments and likes
-    const taskComments = Array.from(this.comments.values())
-      .filter(comment => comment.taskId === id);
+    // Delete associated likes
+    await db.delete(likes).where(eq(likes.taskId, id));
     
-    taskComments.forEach(comment => {
-      this.comments.delete(comment.id);
-    });
+    // Delete the task
+    const [deletedTask] = await db
+      .delete(tasks)
+      .where(eq(tasks.id, id))
+      .returning();
     
-    const taskLikes = Array.from(this.likes.values())
-      .filter(like => like.taskId === id);
-    
-    taskLikes.forEach(like => {
-      this.likes.delete(like.id);
-    });
-    
-    return this.tasks.delete(id);
+    return !!deletedTask;
   }
   
   // Comment methods
   async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
-    const taskComments = Array.from(this.comments.values())
-      .filter(comment => comment.taskId === taskId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const results = await db
+      .select()
+      .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
+      .where(eq(comments.taskId, taskId))
+      .orderBy(comments.createdAt);
     
-    return Promise.all(taskComments.map(async comment => {
-      const user = await this.getUser(comment.userId);
-      return { ...comment, user: user! };
+    return results.map(({ comments: comment, users: user }) => ({
+      ...comment,
+      user: user!,
     }));
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    const id = this.commentCurrentId++;
-    const now = new Date();
-    const comment: Comment = { ...insertComment, id, createdAt: now };
-    this.comments.set(id, comment);
+    const [comment] = await db
+      .insert(comments)
+      .values(insertComment)
+      .returning();
+    
     return comment;
   }
   
   async deleteComment(id: number): Promise<boolean> {
-    return this.comments.delete(id);
+    const [deletedComment] = await db
+      .delete(comments)
+      .where(eq(comments.id, id))
+      .returning();
+    
+    return !!deletedComment;
   }
   
   // Like methods
   async getLikesByTask(taskId: number): Promise<Like[]> {
-    return Array.from(this.likes.values())
-      .filter(like => like.taskId === taskId);
+    return db.select().from(likes).where(eq(likes.taskId, taskId));
   }
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
-    return Array.from(this.likes.values()).find(
-      like => like.userId === userId && like.taskId === taskId
-    );
+    const [like] = await db
+      .select()
+      .from(likes)
+      .where(
+        and(
+          eq(likes.userId, userId),
+          eq(likes.taskId, taskId)
+        )
+      );
+    
+    return like;
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
@@ -201,17 +192,26 @@ export class MemStorage implements IStorage {
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
-    const id = this.likeCurrentId++;
-    const now = new Date();
-    const like: Like = { ...insertLike, id, createdAt: now };
-    this.likes.set(id, like);
+    const [like] = await db
+      .insert(likes)
+      .values(insertLike)
+      .returning();
+    
     return like;
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const like = await this.getLike(userId, taskId);
-    if (!like) return false;
-    return this.likes.delete(like.id);
+    const [deletedLike] = await db
+      .delete(likes)
+      .where(
+        and(
+          eq(likes.userId, userId),
+          eq(likes.taskId, taskId)
+        )
+      )
+      .returning();
+    
+    return !!deletedLike;
   }
   
   // Analytics
@@ -240,31 +240,59 @@ export class MemStorage implements IStorage {
   }
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
-    const tasks = await this.getTasks();
-    return [...tasks]
-      .sort((a, b) => b.likes - a.likes)
-      .slice(0, limit);
+    const results = await db
+      .select({
+        task: tasks,
+        likeCount: count(likes.id).as('likeCount')
+      })
+      .from(tasks)
+      .leftJoin(likes, eq(tasks.id, likes.taskId))
+      .groupBy(tasks.id)
+      .orderBy(desc(sql`"likeCount"`))
+      .limit(limit);
+    
+    return Promise.all(results.map(({ task }) => this.enrichTask(task)));
   }
   
   async getPendingTasksCount(): Promise<number> {
-    const tasks = Array.from(this.tasks.values());
-    return tasks.filter(task => task.status !== "done").length;
+    const result = await db
+      .select({
+        count: count()
+      })
+      .from(tasks)
+      .where(sql`${tasks.status} != 'done'`);
+    
+    return result[0]?.count ?? 0;
   }
   
   // Helper methods
   private async enrichTask(task: Task): Promise<TaskWithDetails> {
-    const user = await this.getUser(task.userId);
-    const taskLikes = await this.getLikesByTask(task.id);
-    const taskComments = Array.from(this.comments.values())
-      .filter(comment => comment.taskId === task.id);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, task.userId));
+    
+    const likesResult = await db
+      .select({
+        count: count()
+      })
+      .from(likes)
+      .where(eq(likes.taskId, task.id));
+    
+    const commentsResult = await db
+      .select({
+        count: count()
+      })
+      .from(comments)
+      .where(eq(comments.taskId, task.id));
     
     return {
       ...task,
       user: user!,
-      likes: taskLikes.length,
-      comments: taskComments.length
+      likes: likesResult[0]?.count ?? 0,
+      comments: commentsResult[0]?.count ?? 0
     };
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

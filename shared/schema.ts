@@ -1,17 +1,21 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
+  email: true,
   username: true,
   password: true,
   displayName: true,
@@ -77,6 +81,29 @@ export const insertLikeSchema = createInsertSchema(likes).pick({
 
 export type InsertLike = z.infer<typeof insertLikeSchema>;
 export type Like = typeof likes.$inferSelect;
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  tasks: many(tasks),
+  comments: many(comments),
+  likes: many(likes),
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  user: one(users, { fields: [tasks.userId], references: [users.id] }),
+  comments: many(comments),
+  likes: many(likes),
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  user: one(users, { fields: [comments.userId], references: [users.id] }),
+  task: one(tasks, { fields: [comments.taskId], references: [tasks.id] }),
+}));
+
+export const likesRelations = relations(likes, ({ one }) => ({
+  user: one(users, { fields: [likes.userId], references: [users.id] }),
+  task: one(tasks, { fields: [likes.taskId], references: [tasks.id] }),
+}));
 
 // Response types for extended data
 export type TaskWithDetails = Task & {
