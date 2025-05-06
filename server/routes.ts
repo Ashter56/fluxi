@@ -7,7 +7,8 @@ import {
   insertTaskSchema,
   insertCommentSchema,
   insertLikeSchema,
-  taskStatus
+  taskStatus,
+  type TaskStatus
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 
@@ -102,18 +103,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    // Add "liked" status for current user
-    const liked = await storage.getLike(currentUserId, task.id);
+    // Add "liked" status for current user if authenticated
+    let liked = false;
+    if (req.isAuthenticated() && req.user) {
+      const likeRecord = await storage.getLike(req.user.id, task.id);
+      liked = !!likeRecord;
+    }
     
-    res.json({ ...task, liked: !!liked });
+    res.json({ ...task, liked });
   });
   
   app.post("/api/tasks", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     try {
       // Validate request body
       const taskData = insertTaskSchema.parse({
         ...req.body,
-        userId: currentUserId, // Always use the current user
+        userId: req.user.id, // Use the authenticated user
       });
       
       // Validate task status
@@ -132,6 +141,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.patch("/api/tasks/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -144,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check task ownership
-      if (task.userId !== currentUserId) {
+      if (task.userId !== req.user.id) {
         return res.status(403).json({ message: "You cannot update this task" });
       }
       
@@ -155,6 +168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate task status if provided
       if (taskUpdate.status && !taskStatus.safeParse(taskUpdate.status).success) {
         return res.status(400).json({ message: "Invalid task status" });
+      }
+      
+      // Cast status as TaskStatus if present
+      if (taskUpdate.status) {
+        taskUpdate.status = taskUpdate.status as TaskStatus;
       }
       
       const updatedTask = await storage.updateTask(taskId, taskUpdate);
@@ -168,6 +186,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.delete("/api/tasks/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -179,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check task ownership
-    if (task.userId !== currentUserId) {
+    if (task.userId !== req.user.id) {
       return res.status(403).json({ message: "You cannot delete this task" });
     }
     
@@ -203,6 +225,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/tasks/:id/comments", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -217,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const commentData = insertCommentSchema.parse({
         ...req.body,
-        userId: currentUserId, // Always use the current user
+        userId: req.user.id,
         taskId
       });
       
@@ -238,6 +264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Likes endpoints
   app.post("/api/tasks/:id/like", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -250,10 +280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if already liked
-      const existingLike = await storage.getLike(currentUserId, taskId);
+      const existingLike = await storage.getLike(req.user.id, taskId);
       if (existingLike) {
         // Unlike if already liked
-        await storage.deleteLike(currentUserId, taskId);
+        await storage.deleteLike(req.user.id, taskId);
         
         const updatedTask = await storage.getTask(taskId);
         return res.json({ ...updatedTask, liked: false });
@@ -261,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Like the task
       const likeData = insertLikeSchema.parse({
-        userId: currentUserId,
+        userId: req.user.id,
         taskId
       });
       
