@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { disableHMR } from "../lib/disable-hmr";
 
 export default function SimpleLogin() {
+  // Disable HMR for this component to prevent WebSocket reconnection issues
+  useEffect(() => {
+    disableHMR();
+  }, []);
+
   const [username, setUsername] = useState("testuser");
   const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
