@@ -1,10 +1,20 @@
 import { useLocation } from "wouter";
-import { Menu, Search, ArrowLeft } from "lucide-react";
+import { Menu, Search, ArrowLeft, LogOut, User as UserIcon, FileText, Home, Plus } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/auth-provider";
+import { User } from "@shared/schema";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   showBackButton?: boolean;
@@ -14,8 +24,9 @@ interface HeaderProps {
 export function Header({ showBackButton = false, title = "Fluxion" }: HeaderProps) {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, logoutMutation } = useAuth();
   
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/users/current"],
   });
   
@@ -27,6 +38,18 @@ export function Header({ showBackButton = false, title = "Fluxion" }: HeaderProp
     if (currentUser) {
       navigate(`/profile/${currentUser.id}`);
     }
+  };
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        navigate("/auth");
+      }
+    });
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
   };
   
   return (
@@ -42,12 +65,37 @@ export function Header({ showBackButton = false, title = "Fluxion" }: HeaderProp
               <ArrowLeft className="h-5 w-5" />
             </button>
           ) : (
-            <button 
-              className="p-1" 
-              aria-label="Menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                  aria-label="Menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Navigation</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleNavigate("/")}>
+                  <Home className="mr-2 h-4 w-4" />
+                  <span>Feed</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleNavigate("/my-tasks")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>My Tasks</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => currentUser && handleNavigate(`/profile/${currentUser.id}`)}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <h1 className="text-xl font-semibold">{title}</h1>
         </div>
