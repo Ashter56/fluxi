@@ -18,18 +18,6 @@ if (typeof window !== 'undefined') {
 }
 
 function App() {
-  // For initial testing, just use the TestAuth component directly 
-  // This bypasses routing to diagnose WebSocket connection issues
-  return (
-    <AuthProvider>
-      <div className="min-h-screen bg-background relative pb-20">
-        <TestAuth />
-      </div>
-    </AuthProvider>
-  );
-  
-  // After WebSocket issues are fixed, we'll restore this:
-  /*
   return (
     <AuthProvider>
       <div className="min-h-screen bg-background relative pb-20">
@@ -47,7 +35,6 @@ function App() {
       </div>
     </AuthProvider>
   );
-  */
 }
 
 export default App;
