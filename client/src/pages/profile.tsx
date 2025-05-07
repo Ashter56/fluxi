@@ -40,24 +40,21 @@ export function Profile() {
     );
   }
 
-  // Mock recent activity for UI purposes
-  const recentActivity = [
-    {
-      type: "completed",
-      title: "User Flow Diagrams",
-      time: "2 days ago"
-    },
-    {
-      type: "liked",
-      title: "Sarah's UI Component Library",
-      time: "3 days ago"
-    },
-    {
-      type: "created",
-      title: "Wireframe Exploration",
-      time: "5 days ago"
+  // Get recent activity from user's tasks
+  const recentActivity = userProfile.popularTasks.slice(0, 3).map(task => {
+    let type = "created";
+    if (task.status === "done") {
+      type = "completed";
+    } else if (task.likes > 0) {
+      type = "liked";
     }
-  ];
+    
+    return {
+      type,
+      title: task.title,
+      time: formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })
+    };
+  });
 
   return (
     <>
@@ -128,26 +125,32 @@ export function Profile() {
           {/* Recent Activity */}
           <div>
             <h3 className="font-semibold mb-3">Recent Activity</h3>
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex gap-3">
-                  <div className="bg-muted rounded-full p-2 h-min">
-                    {activity.type === "completed" && <Check className="h-4 w-4 text-secondary" />}
-                    {activity.type === "liked" && <Heart className="h-4 w-4 text-red-500" />}
-                    {activity.type === "created" && <Plus className="h-4 w-4 text-primary" />}
+            {recentActivity.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div key={index} className="flex gap-3">
+                    <div className="bg-muted rounded-full p-2 h-min">
+                      {activity.type === "completed" && <Check className="h-4 w-4 text-secondary" />}
+                      {activity.type === "liked" && <Heart className="h-4 w-4 text-red-500" />}
+                      {activity.type === "created" && <Plus className="h-4 w-4 text-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm">
+                        {activity.type === "completed" && "Completed "}
+                        {activity.type === "liked" && "Liked "}
+                        {activity.type === "created" && "Created "}
+                        <span className="font-medium">{activity.title}</span>
+                      </p>
+                      <span className="text-xs text-muted-foreground">{activity.time}</span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm">
-                      {activity.type === "completed" && "Completed "}
-                      {activity.type === "liked" && "Liked "}
-                      {activity.type === "created" && "Created "}
-                      <span className="font-medium">{activity.title}</span>
-                    </p>
-                    <span className="text-xs text-muted-foreground">{activity.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-muted p-4 rounded-lg text-center text-muted-foreground">
+                No recent activity
+              </div>
+            )}
           </div>
         </div>
       </div>
