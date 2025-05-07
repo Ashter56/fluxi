@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, LogIn } from "lucide-react";
+import { useToast } from "../hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -25,7 +26,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { user, loginMutation } = useAuth();
-
+  const { toast } = useToast();
+  
   // If user is already logged in, redirect to homepage
   if (user) {
     return <Redirect to="/" />;
@@ -34,16 +36,23 @@ export default function LoginPage() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
-      password: "",
+      username: "testuser",  // Pre-fill with test user
+      password: "password123",  // Pre-fill with test password
     },
   });
 
   const handleLogin = async (data: LoginFormValues) => {
     try {
+      console.log("Attempting login with:", data);
       await loginMutation.mutateAsync(data);
     } catch (error) {
       console.error("Login error:", error);
+      // Display fallback error if mutation didn't handle it
+      toast({
+        title: "Login Error",
+        description: error instanceof Error ? error.message : "Failed to login. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
