@@ -6,44 +6,62 @@ export function disableHMR() {
     
     // @ts-ignore - Forcibly disable HMR
     if (import.meta.hot) {
-      // @ts-ignore
-      import.meta.hot = null;
+      try {
+        // @ts-ignore
+        import.meta.hot = null;
+      } catch (e) {
+        console.log('[Custom] Could not disable import.meta.hot directly');
+      }
     }
     
-    // Block location.reload
-    const originalReload = window.location.reload;
-    window.location.reload = function() {
-      console.log('[Custom] Blocked page reload attempt');
-      return false;
-    };
+    // Instead of overriding reload directly, use a more compatible approach
+    try {
+      // Monitor calls to reload instead of trying to override the property
+      const originalPushState = history.pushState;
+      history.pushState = function(...args) {
+        console.log('[Custom] Intercepted history change');
+        return originalPushState.apply(this, args);
+      };
+    } catch (e) {
+      console.log('[Custom] Could not intercept history API');
+    }
     
-    // Block WebSockets
-    const originalWebSocket = window.WebSocket;
-    window.WebSocket = function(url, protocols) {
-      if (url && typeof url === 'string' && 
-          (url.includes('vite') || url.includes('hmr'))) {
-        console.log('[Custom] Blocked WebSocket connection to:', url);
-        return {
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          send: () => {},
-          close: () => {},
-          dispatchEvent: () => {},
-        };
-      }
-      return new originalWebSocket(url, protocols);
-    };
+    // Block WebSockets safely
+    try {
+      const originalWebSocket = window.WebSocket;
+      window.WebSocket = function(url, protocols) {
+        if (url && typeof url === 'string' && 
+            (url.includes('vite') || url.includes('hmr'))) {
+          console.log('[Custom] Blocked WebSocket connection to:', url);
+          return {
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            send: () => {},
+            close: () => {},
+            dispatchEvent: () => {},
+            readyState: 3, // CLOSED
+          };
+        }
+        return new originalWebSocket(url, protocols);
+      };
+    } catch (e) {
+      console.log('[Custom] Could not override WebSocket constructor');
+    }
     
-    // Block polling messages
-    const originalConsoleLog = console.log;
-    console.log = function(...args) {
-      if (args[0] && typeof args[0] === 'string' && 
-          (args[0].includes('server connection lost') || 
-           args[0].includes('Polling for restart'))) {
-        return;
-      }
-      return originalConsoleLog.apply(this, args);
-    };
+    // Block polling messages safely
+    try {
+      const originalConsoleLog = console.log;
+      console.log = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && 
+            (args[0].includes('server connection lost') || 
+             args[0].includes('Polling for restart'))) {
+          return;
+        }
+        return originalConsoleLog.apply(this, args);
+      };
+    } catch (e) {
+      console.log('[Custom] Could not override console.log');
+    }
   }
 }
 

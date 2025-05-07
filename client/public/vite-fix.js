@@ -2,43 +2,52 @@
 (function() {
   console.log('[ViteFix] Applying aggressive WebSocket and HMR fixes');
   
-  // Block all WebSocket connections from Vite
-  const originalWebSocket = window.WebSocket;
-  window.WebSocket = function(url, protocols) {
-    if (url && typeof url === 'string') {
-      // If it's a Vite connection attempt, return a dummy WebSocket
-      if (url.includes('vite') || url.includes('hmr') || url.includes('ws') || url.includes('localhost')) {
-        console.log('[ViteFix] Blocked WebSocket connection:', url);
-        return {
-          url,
-          CONNECTING: 0,
-          OPEN: 1,
-          CLOSING: 2,
-          CLOSED: 3,
-          readyState: 3,
-          onopen: null,
-          onclose: null,
-          onmessage: null,
-          onerror: null,
-          addEventListener: function() {},
-          removeEventListener: function() {},
-          dispatchEvent: function() { return true; },
-          send: function() {},
-          close: function() {}
-        };
+  try {
+    // Block all WebSocket connections from Vite
+    const originalWebSocket = window.WebSocket;
+    window.WebSocket = function(url, protocols) {
+      if (url && typeof url === 'string') {
+        // If it's a Vite connection attempt, return a dummy WebSocket
+        if (url.includes('vite') || url.includes('hmr') || url.includes('ws') || url.includes('localhost')) {
+          console.log('[ViteFix] Blocked WebSocket connection:', url);
+          return {
+            url,
+            CONNECTING: 0,
+            OPEN: 1,
+            CLOSING: 2,
+            CLOSED: 3,
+            readyState: 3,
+            onopen: null,
+            onclose: null,
+            onmessage: null,
+            onerror: null,
+            addEventListener: function() {},
+            removeEventListener: function() {},
+            dispatchEvent: function() { return true; },
+            send: function() {},
+            close: function() {}
+          };
+        }
       }
-    }
-    
-    // Allow non-Vite WebSockets to proceed normally
-    return new originalWebSocket(url, protocols);
-  };
+      
+      // Allow non-Vite WebSockets to proceed normally
+      return new originalWebSocket(url, protocols);
+    };
+  } catch (e) {
+    console.log('[ViteFix] Could not override WebSocket constructor');
+  }
   
-  // Replace the window.location.reload function to prevent HMR from triggering page reloads
-  const originalReload = window.location.reload;
-  window.location.reload = function() {
-    console.log('[ViteFix] Blocked page reload attempt');
-    return false;
-  };
+  // Intercept history changes instead of trying to override location.reload
+  try {
+    // Monitor navigation changes
+    const originalPushState = history.pushState;
+    history.pushState = function(...args) {
+      console.log('[ViteFix] Intercepted history change');
+      return originalPushState.apply(this, args);
+    };
+  } catch (e) {
+    console.log('[ViteFix] Could not intercept history API');
+  }
   
   // Prevent console.log from showing the connection lost message
   const originalConsoleLog = console.log;
