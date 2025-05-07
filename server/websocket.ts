@@ -6,7 +6,8 @@ import { log } from './vite';
 export enum WebSocketEvent {
   LIKE = 'like',
   NEW_TASK = 'new_task',
-  TASK_STATUS_UPDATE = 'task_status_update'
+  TASK_STATUS_UPDATE = 'task_status_update',
+  PING = 'ping'
 }
 
 // Define a type for WebSocket messages
@@ -64,7 +65,7 @@ export function setupWebSocketServer(server: Server) {
     });
     
     // Send initial ping to confirm connection
-    ws.send(JSON.stringify({ type: 'ping', data: { message: 'Connected to Fluxion WebSocket server' } }));
+    ws.send(JSON.stringify({ type: WebSocketEvent.PING, data: { message: 'Connected to Fluxion WebSocket server' } }));
   });
   
   log('WebSocket server setup complete', 'websocket');

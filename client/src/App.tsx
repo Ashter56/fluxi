@@ -10,6 +10,8 @@ import RegisterPage from "@/pages/register-page";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AuthProvider } from "@/hooks/auth-provider";
 import { disableHMR } from "./lib/disable-hmr";
+import { Toaster } from "@/components/ui/toaster";
+import { WebSocketProvider } from "@/hooks/websocket-provider";
 
 // Try to disable HMR for App.tsx to stabilize connections
 if (typeof window !== 'undefined') {
@@ -19,18 +21,21 @@ if (typeof window !== 'undefined') {
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-background relative pb-20">
-        <Switch>
-          <ProtectedRoute path="/" component={Home} />
-          <ProtectedRoute path="/profile/:id" component={Profile} />
-          <ProtectedRoute path="/tasks/:id" component={TaskDetails} />
-          <ProtectedRoute path="/my-tasks" component={MyTasks} />
-          <Route path="/auth" component={AuthPage} />
-          <Route path="/login" component={LoginPage} />
-          <Route path="/register" component={RegisterPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </div>
+      <WebSocketProvider>
+        <div className="min-h-screen bg-background relative pb-20">
+          <Switch>
+            <ProtectedRoute path="/" component={Home} />
+            <ProtectedRoute path="/profile/:id" component={Profile} />
+            <ProtectedRoute path="/tasks/:id" component={TaskDetails} />
+            <ProtectedRoute path="/my-tasks" component={MyTasks} />
+            <Route path="/auth" component={AuthPage} />
+            <Route path="/login" component={LoginPage} />
+            <Route path="/register" component={RegisterPage} />
+            <Route component={NotFound} />
+          </Switch>
+        </div>
+        <Toaster />
+      </WebSocketProvider>
     </AuthProvider>
   );
 }

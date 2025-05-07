@@ -8,7 +8,8 @@ import { useToast } from './use-toast';
 export enum WebSocketEvent {
   LIKE = 'like',
   NEW_TASK = 'new_task',
-  TASK_STATUS_UPDATE = 'task_status_update'
+  TASK_STATUS_UPDATE = 'task_status_update',
+  PING = 'ping'
 }
 
 // Interface for WebSocket messages
@@ -76,7 +77,7 @@ export function useWebSocket() {
             case WebSocketEvent.TASK_STATUS_UPDATE:
               handleTaskStatusUpdateEvent(message.data);
               break;
-            case 'ping':
+            case WebSocketEvent.PING:
               // Just a connection test, no action needed
               break;
             default:
