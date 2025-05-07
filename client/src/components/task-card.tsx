@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Heart, MessageSquare, Share2 } from "lucide-react";
+import { Heart, MessageSquare, Share2, Edit } from "lucide-react";
 import { type TaskWithDetails } from "@shared/schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
+import { UpdateTaskModal } from "./update-task-modal";
+import { useAuth } from "@/hooks/auth-provider";
 
 interface TaskCardProps {
   task: TaskWithDetails;
@@ -19,6 +21,8 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const [, navigate] = useLocation();
   const [isLiked, setIsLiked] = useState(task.liked);
   const [likeCount, setLikeCount] = useState(task.likes);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const { user } = useAuth();
 
   // Like/unlike mutation
   const likeMutation = useMutation({
@@ -54,6 +58,11 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Share functionality could be implemented here
+  };
+  
+  const handleUpdateClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowUpdateModal(true);
   };
 
   const getTaskContent = () => {
@@ -137,6 +146,16 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
             <span className="text-sm">{likeCount}</span>
           </button>
           
+          {/* Show edit button if this is the user's own task */}
+          {user && task.userId === user.id && (
+            <button 
+              className="flex items-center gap-1 text-muted-foreground hover:text-secondary"
+              onClick={handleUpdateClick}
+            >
+              <Edit className="h-5 w-5" />
+            </button>
+          )}
+          
           <button 
             className="flex items-center gap-1 text-muted-foreground hover:text-primary"
             onClick={handleShareClick}
@@ -145,6 +164,15 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
           </button>
         </div>
       </div>
+      
+      {/* Update Task Modal */}
+      <UpdateTaskModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        taskId={task.id}
+        taskTitle={task.title}
+        currentStatus={task.status}
+      />
     </div>
   );
 }

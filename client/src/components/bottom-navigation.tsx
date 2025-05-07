@@ -42,12 +42,6 @@ export function BottomNavigation() {
     { icon: Home, label: "Feed", path: "/" },
     { icon: CheckSquare, label: "My Tasks", path: "/my-tasks" },
     { 
-      icon: Plus, 
-      label: "Add Task", 
-      action: handleAddTask, 
-      className: "bg-primary text-white rounded-full shadow-lg p-3 -mt-5"
-    },
-    { 
       icon: User, 
       label: "Profile", 
       path: currentUser ? `/profile/${currentUser.id}` : "/profile" 

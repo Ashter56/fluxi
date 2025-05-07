@@ -121,18 +121,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      try {
+        console.log("Logging out user");
+        // Use direct fetch like login to ensure proper session handling
+        const res = await fetch("/api/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Error ${res.status}: ${errorText || res.statusText}`);
+        }
+        
+        return await res.json();
+      } catch (err) {
+        console.error("Logout API error:", err);
+        throw err;
+      }
     },
     onSuccess: () => {
+      // Clear user data and navigate to login
       queryClient.setQueryData(["/api/user"], null);
-      // Invalidate any user-specific queries
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      window.location.href = "/auth"; // Force a full page reload to clear state
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
       });
     },
     onError: (error: Error) => {
+      console.error("Logout error:", error);
       toast({
         title: "Logout failed",
         description: error.message || "An error occurred during logout",
