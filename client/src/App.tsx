@@ -7,6 +7,7 @@ import AuthPage from "@/pages/auth-page";
 import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
 import TestAuth from "@/pages/test-auth";
+import SimpleLogin from "@/pages/login-simple";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AuthProvider } from "@/hooks/auth-provider";
 
@@ -20,6 +21,7 @@ function App() {
           <ProtectedRoute path="/tasks/:id" component={TaskDetails} />
           <Route path="/auth" component={AuthPage} />
           <Route path="/login" component={LoginPage} />
+          <Route path="/login-simple" component={SimpleLogin} />
           <Route path="/register" component={RegisterPage} />
           <Route path="/test-auth" component={TestAuth} />
           <Route component={NotFound} />
