@@ -28,12 +28,52 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const { user } = useAuth();
   const { connected } = useWebSocketStatus();
   
-  // Sync task data with latest prop changes
+  // Initialize state from localStorage and props
   useEffect(() => {
-    setIsLiked(task.liked);
-    setLikeCount(task.likes);
-    setTaskStatus(task.status);
-  }, [task.liked, task.likes, task.status]);
+    try {
+      // Get stored like state from localStorage
+      const likedTasksStr = localStorage.getItem('likedTasks');
+      if (likedTasksStr) {
+        const likedTasks = JSON.parse(likedTasksStr);
+        // Check if this task has stored like state
+        if (likedTasks[task.id]) {
+          // Use localStorage values as they're more up-to-date than server
+          setIsLiked(likedTasks[task.id].liked);
+          setLikeCount(likedTasks[task.id].likes);
+        } else {
+          // Otherwise use the props from the server
+          setIsLiked(task.liked);
+          setLikeCount(task.likes);
+        }
+      } else {
+        // If no localStorage, use props
+        setIsLiked(task.liked);
+        setLikeCount(task.likes);
+      }
+      
+      // Check for stored task status
+      const taskStatusesStr = localStorage.getItem('taskStatuses');
+      if (taskStatusesStr) {
+        const taskStatuses = JSON.parse(taskStatusesStr);
+        if (taskStatuses[task.id]) {
+          // Use localStorage status if available
+          setTaskStatus(taskStatuses[task.id]);
+        } else {
+          // Otherwise use the props from the server
+          setTaskStatus(task.status);
+        }
+      } else {
+        // If no localStorage, use props
+        setTaskStatus(task.status);
+      }
+    } catch (err) {
+      // On any error, fallback to props
+      console.error('Error reading from localStorage:', err);
+      setIsLiked(task.liked);
+      setLikeCount(task.likes);
+      setTaskStatus(task.status);
+    }
+  }, [task.id, task.liked, task.likes, task.status]);
 
   // Like/unlike mutation
   const likeMutation = useMutation({
@@ -42,17 +82,26 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
       return res.json();
     },
     onSuccess: (data) => {
-      // Update local state immediately
+      // Update local state immediately - this updates this specific component
       setIsLiked(data.liked);
       setLikeCount(data.likes);
       
-      // Update the task in the cache directly instead of invalidating
-      const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
-      if (currentTasks) {
-        const updatedTasks = currentTasks.map(t => 
-          t.id === task.id ? { ...t, likes: data.likes, liked: data.liked } : t
-        );
-        queryClient.setQueryData(["/api/tasks"], updatedTasks);
+      // MORE AGGRESSIVE - force refetch of tasks when returning to feed
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      // Update the task in the localStorage for persistence
+      try {
+        // Get current liked tasks
+        const likedTasksStr = localStorage.getItem('likedTasks') || '{}';
+        const likedTasks = JSON.parse(likedTasksStr);
+        
+        // Update the specific task's like state
+        likedTasks[task.id] = { liked: data.liked, likes: data.likes };
+        
+        // Save back to localStorage
+        localStorage.setItem('likedTasks', JSON.stringify(likedTasks));
+      } catch (err) {
+        console.error('Error updating localStorage:', err);
       }
     },
   });

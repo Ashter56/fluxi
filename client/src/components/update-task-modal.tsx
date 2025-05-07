@@ -86,10 +86,26 @@ export function UpdateTaskModal({
         queryClient.setQueryData(["/api/tasks"], updatedTasks);
       }
       
+      // Store task status in localStorage for persistence
+      try {
+        // Get current task statuses
+        const taskStatusesStr = localStorage.getItem('taskStatuses') || '{}';
+        const taskStatuses = JSON.parse(taskStatusesStr);
+        
+        // Update this task's status
+        taskStatuses[taskId] = updatedTask.status;
+        
+        // Save back to localStorage
+        localStorage.setItem('taskStatuses', JSON.stringify(taskStatuses));
+      } catch (err) {
+        console.error('Error updating task status in localStorage:', err);
+      }
+      
       // Also update the individual task cache if it exists
       queryClient.setQueryData([`/api/tasks/${taskId}`], updatedTask);
       
-      // Update the pending count
+      // MORE AGGRESSIVE - force refetch tasks when returning to feed
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/pending-count"] });
       
       form.reset();
