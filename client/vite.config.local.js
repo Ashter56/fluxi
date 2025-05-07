@@ -3,14 +3,9 @@
 
 export default {
   server: {
-    hmr: {
-      clientPort: 443, // Required for Replit's proxy
-      protocol: 'wss', // Force secure WebSocket
-      timeout: 30000,  // Retry every 30 seconds
-    },
+    hmr: false, // Completely disable HMR to prevent connection issues
     watch: {
-      usePolling: true,
-      interval: 1000,
+      usePolling: false, // Disable file polling 
     },
   },
 };
