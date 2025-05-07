@@ -11,6 +11,7 @@ import {
   type TaskStatus
 } from "@shared/schema";
 import { setupAuth } from "./auth";
+import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
@@ -131,6 +132,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const task = await storage.createTask(taskData);
+      
+      // Get full task with user details for broadcasting
+      const fullTask = await storage.getTask(task.id);
+      
+      // Broadcast the new task to all connected clients
+      broadcastMessage(WebSocketEvent.NEW_TASK, fullTask);
+      
       res.status(201).json(task);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -176,6 +184,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedTask = await storage.updateTask(taskId, taskUpdate);
+      
+      // If status was updated, broadcast the status change
+      if (taskUpdate.status) {
+        // Get full task with user details for broadcasting
+        const fullTask = await storage.getTask(taskId);
+        if (fullTask) {
+          broadcastMessage(WebSocketEvent.TASK_STATUS_UPDATE, fullTask);
+        }
+      }
+      
       res.json(updatedTask);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -286,6 +304,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.deleteLike(req.user.id, taskId);
         
         const updatedTask = await storage.getTask(taskId);
+        
+        // Broadcast like update (like count decreased)
+        if (updatedTask) {
+          broadcastMessage(WebSocketEvent.LIKE, {
+            ...updatedTask,
+            liked: false,
+            action: 'unlike'
+          });
+        }
+        
         return res.json({ ...updatedTask, liked: false });
       }
       
@@ -298,6 +326,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createLike(likeData);
       
       const updatedTask = await storage.getTask(taskId);
+      
+      // Broadcast like update (like count increased)
+      if (updatedTask) {
+        broadcastMessage(WebSocketEvent.LIKE, {
+          ...updatedTask,
+          liked: true,
+          action: 'like'
+        });
+      }
+      
       res.json({ ...updatedTask, liked: true });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -309,6 +347,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Create HTTP server
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server
+  const wss = setupWebSocketServer(httpServer);
   
   return httpServer;
 }

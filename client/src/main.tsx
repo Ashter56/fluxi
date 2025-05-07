@@ -1,8 +1,4 @@
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    window.location.reload = () => {};
-  });
-}
+
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";

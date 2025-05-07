@@ -1,0 +1,226 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from './auth-provider';
+import { queryClient } from '@/lib/queryClient';
+import { TaskWithDetails } from '@shared/schema';
+import { useToast } from './use-toast';
+
+// Define the same event types as on the server
+export enum WebSocketEvent {
+  LIKE = 'like',
+  NEW_TASK = 'new_task',
+  TASK_STATUS_UPDATE = 'task_status_update'
+}
+
+// Interface for WebSocket messages
+interface WebSocketMessage {
+  type: WebSocketEvent;
+  data: any;
+}
+
+export function useWebSocket() {
+  const { user } = useAuth();
+  const [connected, setConnected] = useState(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  const { toast } = useToast();
+  
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Function to connect to the WebSocket server
+  const connect = useCallback(() => {
+    // Cleanup any existing connection
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+    
+    // Clear any existing reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    
+    try {
+      // Determine the correct WebSocket URL based on the current protocol and host
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      // Create a new WebSocket connection
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
+      
+      // Handle the connection opening
+      socket.onopen = () => {
+        console.log('WebSocket connection established');
+        setConnected(true);
+        
+        // If the user is logged in, send authentication info
+        if (user) {
+          socket.send(JSON.stringify({
+            type: 'auth',
+            userId: user.id
+          }));
+        }
+      };
+      
+      // Handle incoming messages
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data) as WebSocketMessage;
+          
+          switch (message.type) {
+            case WebSocketEvent.LIKE:
+              handleLikeEvent(message.data);
+              break;
+            case WebSocketEvent.NEW_TASK:
+              handleNewTaskEvent(message.data);
+              break;
+            case WebSocketEvent.TASK_STATUS_UPDATE:
+              handleTaskStatusUpdateEvent(message.data);
+              break;
+            case 'ping':
+              // Just a connection test, no action needed
+              break;
+            default:
+              console.log('Unknown message type:', message.type);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      // Handle connection closure
+      socket.onclose = (event) => {
+        console.log(`WebSocket connection closed. Code: ${event.code}`);
+        setConnected(false);
+        
+        // Attempt to reconnect after a delay
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Attempting to reconnect WebSocket...');
+          connect();
+        }, 3000); // Try to reconnect after 3 seconds
+      };
+      
+      // Handle errors
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // The onclose handler will be called automatically after an error
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      
+      // Try again after a delay
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log('Attempting to reconnect WebSocket after error...');
+        connect();
+      }, 5000); // Try to reconnect after 5 seconds
+    }
+  }, [user]);
+  
+  // Connect when the component mounts and when user changes
+  useEffect(() => {
+    connect();
+    
+    // Cleanup function to close the WebSocket when the component unmounts
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+      
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
+  }, [connect]);
+  
+  // Handle like/unlike events from the WebSocket
+  const handleLikeEvent = useCallback((data: TaskWithDetails & { action: 'like' | 'unlike' }) => {
+    // Try to update the task in the cache first
+    const taskId = data.id;
+    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    
+    if (currentTasks) {
+      const updatedTasks = currentTasks.map(task => 
+        task.id === taskId ? { ...task, likes: data.likes } : task
+      );
+      
+      // Update the cached tasks with the new like count
+      queryClient.setQueryData(['/api/tasks'], updatedTasks);
+    }
+    
+    // Also update the individual task cache if it exists
+    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
+    if (currentTask) {
+      queryClient.setQueryData(['/api/tasks', taskId], {
+        ...currentTask,
+        likes: data.likes
+      });
+    }
+    
+    // Not showing a toast for likes to avoid too many notifications
+  }, []);
+  
+  // Handle new task events from the WebSocket
+  const handleNewTaskEvent = useCallback((task: TaskWithDetails) => {
+    // Prepend the new task to the task list in the cache
+    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    
+    if (currentTasks) {
+      const updatedTasks = [task, ...currentTasks];
+      queryClient.setQueryData(['/api/tasks'], updatedTasks);
+      
+      // Show a toast notification for new tasks
+      if (user && task.userId !== user.id) {
+        toast({
+          title: "New Task",
+          description: `${task.user.displayName} created a new task: ${task.title}`,
+        });
+      }
+    }
+  }, [user, toast]);
+  
+  // Handle task status update events from the WebSocket
+  const handleTaskStatusUpdateEvent = useCallback((task: TaskWithDetails) => {
+    // Update the task in the cache
+    const taskId = task.id;
+    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    
+    if (currentTasks) {
+      const updatedTasks = currentTasks.map(t => 
+        t.id === taskId ? { ...t, status: task.status } : t
+      );
+      
+      queryClient.setQueryData(['/api/tasks'], updatedTasks);
+      
+      // Show a toast notification for task status updates (only for other users' tasks)
+      if (user && task.userId !== user.id) {
+        let statusText = "";
+        switch(task.status) {
+          case "pending":
+            statusText = "pending";
+            break;
+          case "in_progress":
+            statusText = "in progress";
+            break;
+          case "done":
+            statusText = "completed";
+            break;
+        }
+        
+        toast({
+          title: "Task Updated",
+          description: `${task.user.displayName} marked "${task.title}" as ${statusText}`,
+        });
+      }
+    }
+    
+    // Also update the individual task cache if it exists
+    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
+    if (currentTask) {
+      queryClient.setQueryData(['/api/tasks', taskId], {
+        ...currentTask,
+        status: task.status
+      });
+    }
+  }, [user, toast]);
+  
+  return { connected };
+}
