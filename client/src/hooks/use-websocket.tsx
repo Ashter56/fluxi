@@ -26,6 +26,144 @@ export function useWebSocket() {
   
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Event subscription system
+  const eventListeners = useRef<{
+    [key in WebSocketEvent]?: Array<(data: any) => void>
+  }>({});
+  
+  // Add a subscription to a specific event type
+  const subscribe = useCallback((event: WebSocketEvent, callback: (data: any) => void) => {
+    // Initialize listener array if needed
+    if (!eventListeners.current[event]) {
+      eventListeners.current[event] = [];
+    }
+    
+    // Add the callback to the listeners
+    eventListeners.current[event]?.push(callback);
+    
+    // Return an unsubscribe function
+    return () => {
+      if (eventListeners.current[event]) {
+        eventListeners.current[event] = eventListeners.current[event]?.filter(
+          cb => cb !== callback
+        );
+      }
+    };
+  }, []);
+  
+  // Function to call all registered event listeners
+  const notifyEventListeners = useCallback((event: WebSocketEvent, data: any) => {
+    if (eventListeners.current[event]) {
+      eventListeners.current[event]?.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in ${event} event listener:`, error);
+        }
+      });
+    }
+  }, []);
+  
+  // Handle like/unlike events from the WebSocket
+  const handleLikeEvent = useCallback((data: TaskWithDetails & { action: 'like' | 'unlike' }) => {
+    // Try to update the task in the cache first
+    const taskId = data.id;
+    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    
+    if (currentTasks) {
+      const updatedTasks = currentTasks.map(task => 
+        task.id === taskId ? { ...task, likes: data.likes } : task
+      );
+      
+      // Update the cached tasks with the new like count
+      queryClient.setQueryData(['/api/tasks'], updatedTasks);
+    }
+    
+    // Also update the individual task cache if it exists
+    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
+    if (currentTask) {
+      queryClient.setQueryData(['/api/tasks', taskId], {
+        ...currentTask,
+        likes: data.likes
+      });
+    }
+    
+    // Notify subscribers
+    notifyEventListeners(WebSocketEvent.LIKE, data);
+    
+    // Not showing a toast for likes to avoid too many notifications
+  }, [notifyEventListeners]);
+  
+  // Handle new task events from the WebSocket
+  const handleNewTaskEvent = useCallback((task: TaskWithDetails) => {
+    // Prepend the new task to the task list in the cache
+    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    
+    if (currentTasks) {
+      const updatedTasks = [task, ...currentTasks];
+      queryClient.setQueryData(['/api/tasks'], updatedTasks);
+      
+      // Show a toast notification for new tasks
+      if (user && task.userId !== user.id) {
+        toast({
+          title: "New Task",
+          description: `${task.user.displayName} created a new task: ${task.title}`,
+        });
+      }
+    }
+    
+    // Notify subscribers
+    notifyEventListeners(WebSocketEvent.NEW_TASK, task);
+  }, [user, toast, notifyEventListeners]);
+  
+  // Handle task status update events from the WebSocket
+  const handleTaskStatusUpdateEvent = useCallback((task: TaskWithDetails) => {
+    // Update the task in the cache
+    const taskId = task.id;
+    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    
+    if (currentTasks) {
+      const updatedTasks = currentTasks.map(t => 
+        t.id === taskId ? { ...t, status: task.status } : t
+      );
+      
+      queryClient.setQueryData(['/api/tasks'], updatedTasks);
+      
+      // Show a toast notification for task status updates (only for other users' tasks)
+      if (user && task.userId !== user.id) {
+        let statusText = "";
+        switch(task.status) {
+          case "pending":
+            statusText = "pending";
+            break;
+          case "in_progress":
+            statusText = "in progress";
+            break;
+          case "done":
+            statusText = "completed";
+            break;
+        }
+        
+        toast({
+          title: "Task Updated",
+          description: `${task.user.displayName} marked "${task.title}" as ${statusText}`,
+        });
+      }
+    }
+    
+    // Also update the individual task cache if it exists
+    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
+    if (currentTask) {
+      queryClient.setQueryData(['/api/tasks', taskId], {
+        ...currentTask,
+        status: task.status
+      });
+    }
+    
+    // Notify subscribers
+    notifyEventListeners(WebSocketEvent.TASK_STATUS_UPDATE, task);
+  }, [user, toast, notifyEventListeners]);
+
   // Function to connect to the WebSocket server
   const connect = useCallback(() => {
     // Cleanup any existing connection
@@ -114,7 +252,7 @@ export function useWebSocket() {
         connect();
       }, 5000); // Try to reconnect after 5 seconds
     }
-  }, [user]);
+  }, [user, handleLikeEvent, handleNewTaskEvent, handleTaskStatusUpdateEvent]);
   
   // Connect when the component mounts and when user changes
   useEffect(() => {
@@ -132,96 +270,5 @@ export function useWebSocket() {
     };
   }, [connect]);
   
-  // Handle like/unlike events from the WebSocket
-  const handleLikeEvent = useCallback((data: TaskWithDetails & { action: 'like' | 'unlike' }) => {
-    // Try to update the task in the cache first
-    const taskId = data.id;
-    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
-    
-    if (currentTasks) {
-      const updatedTasks = currentTasks.map(task => 
-        task.id === taskId ? { ...task, likes: data.likes } : task
-      );
-      
-      // Update the cached tasks with the new like count
-      queryClient.setQueryData(['/api/tasks'], updatedTasks);
-    }
-    
-    // Also update the individual task cache if it exists
-    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
-    if (currentTask) {
-      queryClient.setQueryData(['/api/tasks', taskId], {
-        ...currentTask,
-        likes: data.likes
-      });
-    }
-    
-    // Not showing a toast for likes to avoid too many notifications
-  }, []);
-  
-  // Handle new task events from the WebSocket
-  const handleNewTaskEvent = useCallback((task: TaskWithDetails) => {
-    // Prepend the new task to the task list in the cache
-    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
-    
-    if (currentTasks) {
-      const updatedTasks = [task, ...currentTasks];
-      queryClient.setQueryData(['/api/tasks'], updatedTasks);
-      
-      // Show a toast notification for new tasks
-      if (user && task.userId !== user.id) {
-        toast({
-          title: "New Task",
-          description: `${task.user.displayName} created a new task: ${task.title}`,
-        });
-      }
-    }
-  }, [user, toast]);
-  
-  // Handle task status update events from the WebSocket
-  const handleTaskStatusUpdateEvent = useCallback((task: TaskWithDetails) => {
-    // Update the task in the cache
-    const taskId = task.id;
-    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
-    
-    if (currentTasks) {
-      const updatedTasks = currentTasks.map(t => 
-        t.id === taskId ? { ...t, status: task.status } : t
-      );
-      
-      queryClient.setQueryData(['/api/tasks'], updatedTasks);
-      
-      // Show a toast notification for task status updates (only for other users' tasks)
-      if (user && task.userId !== user.id) {
-        let statusText = "";
-        switch(task.status) {
-          case "pending":
-            statusText = "pending";
-            break;
-          case "in_progress":
-            statusText = "in progress";
-            break;
-          case "done":
-            statusText = "completed";
-            break;
-        }
-        
-        toast({
-          title: "Task Updated",
-          description: `${task.user.displayName} marked "${task.title}" as ${statusText}`,
-        });
-      }
-    }
-    
-    // Also update the individual task cache if it exists
-    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
-    if (currentTask) {
-      queryClient.setQueryData(['/api/tasks', taskId], {
-        ...currentTask,
-        status: task.status
-      });
-    }
-  }, [user, toast]);
-  
-  return { connected };
+  return { connected, subscribe };
 }

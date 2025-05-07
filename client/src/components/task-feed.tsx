@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type TaskWithDetails } from "@shared/schema";
+import { type TaskWithDetails, type TaskStatus } from "@shared/schema";
 import { TaskCard } from "@/components/task-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWebSocketStatus } from "@/hooks/websocket-provider";
+import { useWebSocket, WebSocketEvent } from "@/hooks/use-websocket";
 
 export function TaskFeed() {
   const [localTasks, setLocalTasks] = useState<TaskWithDetails[]>([]);
   const { connected } = useWebSocketStatus();
+  const { subscribe } = useWebSocket();
   
   const { data: tasks, isLoading, error } = useQuery<TaskWithDetails[]>({
     queryKey: ["/api/tasks"],
@@ -19,6 +21,55 @@ export function TaskFeed() {
       setLocalTasks(tasks);
     }
   }, [tasks]);
+  
+  // Handle new task events
+  useEffect(() => {
+    const newTaskHandler = (newTask: TaskWithDetails) => {
+      setLocalTasks(prevTasks => {
+        // If the task already exists, don't add it again
+        if (prevTasks.some(task => task.id === newTask.id)) {
+          return prevTasks;
+        }
+        
+        // Add the new task at the beginning of the array
+        return [newTask, ...prevTasks];
+      });
+    };
+    
+    // Handle task status update events
+    const statusUpdateHandler = (updatedTask: TaskWithDetails) => {
+      setLocalTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === updatedTask.id 
+            ? { ...task, status: updatedTask.status } 
+            : task
+        )
+      );
+    };
+    
+    // Handle like events
+    const likeHandler = (likeData: { taskId: number, count: number, liked: boolean }) => {
+      setLocalTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === likeData.taskId 
+            ? { ...task, likes: likeData.count, liked: likeData.liked } 
+            : task
+        )
+      );
+    };
+    
+    // Subscribe to WebSocket events
+    const unsubscribeNewTask = subscribe(WebSocketEvent.NEW_TASK, newTaskHandler);
+    const unsubscribeStatusUpdate = subscribe(WebSocketEvent.TASK_STATUS_UPDATE, statusUpdateHandler);
+    const unsubscribeLike = subscribe(WebSocketEvent.LIKE, likeHandler);
+    
+    // Cleanup subscriptions
+    return () => {
+      unsubscribeNewTask();
+      unsubscribeStatusUpdate();
+      unsubscribeLike();
+    };
+  }, [subscribe]);
   
   if (isLoading) {
     return (

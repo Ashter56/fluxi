@@ -12,6 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { UpdateTaskModal } from "./update-task-modal";
 import { useAuth } from "@/hooks/auth-provider";
 import { useWebSocketStatus } from "@/hooks/websocket-provider";
+import { useToast } from "@/hooks/use-toast";
 
 interface TaskCardProps {
   task: TaskWithDetails;
