@@ -4,6 +4,8 @@ import { Profile } from "@/pages/profile";
 import { TaskDetails } from "@/pages/task-details";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import LoginPage from "@/pages/login-page";
+import RegisterPage from "@/pages/register-page";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AuthProvider } from "@/hooks/auth-provider";
 
@@ -16,6 +18,8 @@ function App() {
           <ProtectedRoute path="/profile/:id" component={Profile} />
           <ProtectedRoute path="/tasks/:id" component={TaskDetails} />
           <Route path="/auth" component={AuthPage} />
+          <Route path="/login" component={LoginPage} />
+          <Route path="/register" component={RegisterPage} />
           <Route component={NotFound} />
         </Switch>
       </div>
