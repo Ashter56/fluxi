@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/auth-provider";
-import { User } from "@shared/schema";
+import type { User } from "@shared/schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,7 +120,7 @@ export function Header({ showBackButton = false, title = "Fluxion" }: HeaderProp
         >
           {currentUser ? (
             <Avatar className="w-8 h-8">
-              <AvatarImage src={currentUser.avatarUrl} alt={currentUser.displayName} />
+              <AvatarImage src={currentUser.avatarUrl ?? undefined} alt={currentUser.displayName} />
               <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
             </Avatar>
           ) : (
