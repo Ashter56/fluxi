@@ -87,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // Invalidate any queries that might depend on auth status
       queryClient.invalidateQueries();
+      
+      // Force navigation to the home page
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       console.error("Login mutation error:", error);
@@ -109,6 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Registration successful",
         description: `Welcome to Fluxion, ${user.displayName}!`,
       });
+      // Force navigation to home page
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({
