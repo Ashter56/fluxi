@@ -50,7 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginData) => {
       try {
         console.log("Logging in with:", credentials.username);
-        const res = await apiRequest("POST", "/api/login", credentials);
+        // Use a direct fetch instead of our apiRequest to avoid issues
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(credentials),
+          credentials: "include",
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          try {
+            const errorData = JSON.parse(errorText);
+            throw new Error(errorData.message || `Error ${res.status}: ${res.statusText}`);
+          } catch (e) {
+            throw new Error(`Error ${res.status}: ${errorText || res.statusText}`);
+          }
+        }
+        
         const userData = await res.json();
         console.log("Login success, user data:", userData);
         return userData;
@@ -66,6 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Login successful",
         description: `Welcome back, ${user.displayName}!`,
       });
+      // Invalidate any queries that might depend on auth status
+      queryClient.invalidateQueries();
     },
     onError: (error: Error) => {
       console.error("Login mutation error:", error);

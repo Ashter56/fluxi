@@ -1,4 +1,4 @@
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useAuth } from "@/hooks/auth-provider";
 import { Redirect, Link } from "wouter";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, LogIn } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
+import { queryClient } from "../lib/queryClient";
 import {
   Form,
   FormControl,
@@ -27,9 +28,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { user, loginMutation } = useAuth();
   const { toast } = useToast();
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState(false);
   
-  // If user is already logged in, redirect to homepage
-  if (user) {
+  // If user is already logged in or login just succeeded, redirect to homepage
+  if (user || redirectAfterLogin) {
     return <Redirect to="/" />;
   }
 
@@ -44,10 +46,47 @@ export default function LoginPage() {
   const handleLogin = async (data: LoginFormValues) => {
     try {
       console.log("Attempting login with:", data);
-      await loginMutation.mutateAsync(data);
+      // Direct approach bypassing the mutation if needed
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        console.log("Login success, user data:", userData);
+        
+        // Update the cache manually
+        queryClient.setQueryData(["/api/user"], userData);
+        
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${userData.displayName}!`,
+        });
+        
+        // Redirect to homepage after successful login
+        setRedirectAfterLogin(true);
+      } else {
+        let errorText = await response.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorText = errorJson.message || errorText;
+        } catch (e) {
+          // If parsing fails, use the text as is
+        }
+        
+        toast({
+          title: "Login failed",
+          description: errorText,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Login error:", error);
-      // Display fallback error if mutation didn't handle it
       toast({
         title: "Login Error",
         description: error instanceof Error ? error.message : "Failed to login. Please try again.",
