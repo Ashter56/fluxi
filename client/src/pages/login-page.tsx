@@ -30,11 +30,6 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(false);
   
-  // If user is already logged in or login just succeeded, redirect to homepage
-  if (user || redirectAfterLogin) {
-    return <Redirect to="/" />;
-  }
-
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -42,6 +37,11 @@ export default function LoginPage() {
       password: "password123",  // Pre-fill with test password
     },
   });
+  
+  // If user is already logged in or login just succeeded, redirect to homepage
+  if (user || redirectAfterLogin) {
+    return <Redirect to="/" />;
+  }
 
   const handleLogin = async (data: LoginFormValues) => {
     try {
