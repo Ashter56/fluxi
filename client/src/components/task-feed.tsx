@@ -1,12 +1,24 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type TaskWithDetails } from "@shared/schema";
 import { TaskCard } from "@/components/task-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWebSocketStatus } from "@/hooks/websocket-provider";
 
 export function TaskFeed() {
+  const [localTasks, setLocalTasks] = useState<TaskWithDetails[]>([]);
+  const { connected } = useWebSocketStatus();
+  
   const { data: tasks, isLoading, error } = useQuery<TaskWithDetails[]>({
     queryKey: ["/api/tasks"],
   });
+  
+  // Sync task data from API with local state
+  useEffect(() => {
+    if (tasks) {
+      setLocalTasks(tasks);
+    }
+  }, [tasks]);
   
   if (isLoading) {
     return (
@@ -40,7 +52,7 @@ export function TaskFeed() {
     );
   }
   
-  if (!tasks?.length) {
+  if (!localTasks?.length) {
     return (
       <div className="bg-muted p-8 rounded-lg text-center">
         <p className="text-muted-foreground">No tasks found. Add your first task!</p>
@@ -48,11 +60,19 @@ export function TaskFeed() {
     );
   }
   
+  // Render connection status indicator if needed
+  const connectionIndicator = connected ? (
+    <div className="text-xs text-right mb-2 text-green-600">Live Updates</div>
+  ) : null;
+  
   return (
-    <div className="space-y-4">
-      {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} />
-      ))}
+    <div>
+      {connectionIndicator}
+      <div className="space-y-4">
+        {localTasks.map((task) => (
+          <TaskCard key={task.id} task={task} />
+        ))}
+      </div>
     </div>
   );
 }

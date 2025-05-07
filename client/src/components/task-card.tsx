@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Heart, MessageSquare, Share2, Edit } from "lucide-react";
 import { type TaskWithDetails } from "@shared/schema";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { UpdateTaskModal } from "./update-task-modal";
 import { useAuth } from "@/hooks/auth-provider";
+import { useWebSocketStatus } from "@/hooks/websocket-provider";
 
 interface TaskCardProps {
   task: TaskWithDetails;
@@ -21,8 +22,17 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const [, navigate] = useLocation();
   const [isLiked, setIsLiked] = useState(task.liked);
   const [likeCount, setLikeCount] = useState(task.likes);
+  const [taskStatus, setTaskStatus] = useState(task.status);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const { user } = useAuth();
+  const { connected } = useWebSocketStatus();
+  
+  // Sync task data with latest prop changes
+  useEffect(() => {
+    setIsLiked(task.liked);
+    setLikeCount(task.likes);
+    setTaskStatus(task.status);
+  }, [task.liked, task.likes, task.status]);
 
   // Like/unlike mutation
   const likeMutation = useMutation({
@@ -85,10 +95,10 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
           </Avatar>
           <div className="flex-1">
             <p className="text-sm">
-              <span className="font-medium">{task.user.displayName}</span> has {task.status === "done" ? "completed" : "created"} the task '{task.title}'
+              <span className="font-medium">{task.user.displayName}</span> has {taskStatus === "done" ? "completed" : "created"} the task '{task.title}'
             </p>
             <div className="mt-1 flex items-center">
-              <StatusBadge status={task.status} />
+              <StatusBadge status={taskStatus} />
               {detailed && (
                 <span className="text-muted-foreground text-sm ml-2">
                   {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
