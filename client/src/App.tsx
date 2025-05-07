@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
+import TestAuth from "@/pages/test-auth";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AuthProvider } from "@/hooks/auth-provider";
 
@@ -20,6 +21,7 @@ function App() {
           <Route path="/auth" component={AuthPage} />
           <Route path="/login" component={LoginPage} />
           <Route path="/register" component={RegisterPage} />
+          <Route path="/test-auth" component={TestAuth} />
           <Route component={NotFound} />
         </Switch>
       </div>
