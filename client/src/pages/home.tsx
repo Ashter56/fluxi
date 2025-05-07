@@ -18,10 +18,6 @@ export function Home() {
         
         <div className="mt-4">
           <h2 className="text-lg font-semibold mb-4">Task Feed</h2>
-          
-          {/* Only show create task form for authenticated users */}
-          {user && <CreateTaskForm />}
-          
           <TaskFeed />
         </div>
       </main>

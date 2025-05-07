@@ -71,15 +71,25 @@ export function UpdateTaskModal({
       const res = await apiRequest("PATCH", `/api/tasks/${taskId}`, data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedTask) => {
       toast({
         title: "Task updated",
         description: "Your task has been updated successfully.",
       });
       
-      // Invalidate relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      // Update the tasks in the cache directly
+      const currentTasks = queryClient.getQueryData<any[]>(["/api/tasks"]);
+      if (currentTasks) {
+        const updatedTasks = currentTasks.map(task => 
+          task.id === taskId ? { ...task, status: updatedTask.status } : task
+        );
+        queryClient.setQueryData(["/api/tasks"], updatedTasks);
+      }
+      
+      // Also update the individual task cache if it exists
+      queryClient.setQueryData([`/api/tasks/${taskId}`], updatedTask);
+      
+      // Update the pending count
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/pending-count"] });
       
       form.reset();

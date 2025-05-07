@@ -1,61 +1,59 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type TaskWithDetails, type TaskStatus } from "@shared/schema";
 import { TaskCard } from "@/components/task-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWebSocketStatus } from "@/hooks/websocket-provider";
 import { useWebSocket, WebSocketEvent } from "@/hooks/use-websocket";
+import { queryClient } from "@/lib/queryClient";
 
 export function TaskFeed() {
-  const [localTasks, setLocalTasks] = useState<TaskWithDetails[]>([]);
-  const { connected } = useWebSocketStatus();
   const { subscribe } = useWebSocket();
   
   const { data: tasks, isLoading, error } = useQuery<TaskWithDetails[]>({
     queryKey: ["/api/tasks"],
+    staleTime: 10 * 60 * 1000, // Keep the data fresh for 10 minutes
   });
   
-  // Sync task data from API with local state
+  // Handle WebSocket events to update our React Query cache
   useEffect(() => {
-    if (tasks) {
-      setLocalTasks(tasks);
-    }
-  }, [tasks]);
-  
-  // Handle new task events
-  useEffect(() => {
+    // When a new task is created
     const newTaskHandler = (newTask: TaskWithDetails) => {
-      setLocalTasks(prevTasks => {
+      const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
+      if (currentTasks) {
         // If the task already exists, don't add it again
-        if (prevTasks.some(task => task.id === newTask.id)) {
-          return prevTasks;
+        if (currentTasks.some(task => task.id === newTask.id)) {
+          return;
         }
         
-        // Add the new task at the beginning of the array
-        return [newTask, ...prevTasks];
-      });
+        // Update cache with the new task at the beginning
+        queryClient.setQueryData(["/api/tasks"], [newTask, ...currentTasks]);
+      }
     };
     
-    // Handle task status update events
+    // When a task's status is updated
     const statusUpdateHandler = (updatedTask: TaskWithDetails) => {
-      setLocalTasks(prevTasks => 
-        prevTasks.map(task => 
+      const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
+      if (currentTasks) {
+        const updatedTasks = currentTasks.map(task => 
           task.id === updatedTask.id 
             ? { ...task, status: updatedTask.status } 
             : task
-        )
-      );
+        );
+        queryClient.setQueryData(["/api/tasks"], updatedTasks);
+      }
     };
     
-    // Handle like events
+    // When a task is liked/unliked
     const likeHandler = (likeData: { taskId: number, count: number, liked: boolean }) => {
-      setLocalTasks(prevTasks => 
-        prevTasks.map(task => 
+      const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
+      if (currentTasks) {
+        const updatedTasks = currentTasks.map(task => 
           task.id === likeData.taskId 
             ? { ...task, likes: likeData.count, liked: likeData.liked } 
             : task
-        )
-      );
+        );
+        queryClient.setQueryData(["/api/tasks"], updatedTasks);
+      }
     };
     
     // Subscribe to WebSocket events
@@ -103,7 +101,7 @@ export function TaskFeed() {
     );
   }
   
-  if (!localTasks?.length) {
+  if (!tasks?.length) {
     return (
       <div className="bg-muted p-8 rounded-lg text-center">
         <p className="text-muted-foreground">No tasks found. Add your first task!</p>
@@ -111,19 +109,11 @@ export function TaskFeed() {
     );
   }
   
-  // Render connection status indicator if needed
-  const connectionIndicator = connected ? (
-    <div className="text-xs text-right mb-2 text-green-600">Live Updates</div>
-  ) : null;
-  
   return (
-    <div>
-      {connectionIndicator}
-      <div className="space-y-4">
-        {localTasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
-        ))}
-      </div>
+    <div className="space-y-4">
+      {tasks.map((task) => (
+        <TaskCard key={task.id} task={task} />
+      ))}
     </div>
   );
 }

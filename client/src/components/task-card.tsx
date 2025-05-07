@@ -42,9 +42,18 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
       return res.json();
     },
     onSuccess: (data) => {
+      // Update local state immediately
       setIsLiked(data.liked);
       setLikeCount(data.likes);
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      // Update the task in the cache directly instead of invalidating
+      const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
+      if (currentTasks) {
+        const updatedTasks = currentTasks.map(t => 
+          t.id === task.id ? { ...t, likes: data.likes, liked: data.liked } : t
+        );
+        queryClient.setQueryData(["/api/tasks"], updatedTasks);
+      }
     },
   });
 
