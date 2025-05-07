@@ -10,8 +10,26 @@ import TestAuth from "@/pages/test-auth";
 import SimpleLogin from "@/pages/login-simple";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AuthProvider } from "@/hooks/auth-provider";
+import { disableHMR } from "./lib/disable-hmr";
+
+// Try to disable HMR for App.tsx to stabilize connections
+if (typeof window !== 'undefined') {
+  disableHMR();
+}
 
 function App() {
+  // For initial testing, just use the TestAuth component directly 
+  // This bypasses routing to diagnose WebSocket connection issues
+  return (
+    <AuthProvider>
+      <div className="min-h-screen bg-background relative pb-20">
+        <TestAuth />
+      </div>
+    </AuthProvider>
+  );
+  
+  // After WebSocket issues are fixed, we'll restore this:
+  /*
   return (
     <AuthProvider>
       <div className="min-h-screen bg-background relative pb-20">
@@ -29,6 +47,7 @@ function App() {
       </div>
     </AuthProvider>
   );
+  */
 }
 
 export default App;
