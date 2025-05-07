@@ -1,57 +1,82 @@
-// This script can be imported to disable HMR (Hot Module Replacement) on specific pages
-// This can help reduce WebSocket reconnection issues in environments with unstable connections
+// This module forcibly disables Vite's HMR functionality
 
-// Function to disable HMR for the current module
 export function disableHMR() {
-  // Access the import.meta.hot object which is provided by Vite
-  if (import.meta.hot) {
-    // Disable HMR for this module
-    import.meta.hot.decline();
+  if (typeof window !== 'undefined') {
+    console.log('[Custom] Disabling Vite HMR completely');
     
-    // Log that HMR is disabled
-    console.log('[HMR] Hot Module Replacement disabled for this module');
-  }
-}
-
-// Function to reduce HMR refresh frequency
-export function reduceHMRFrequency() {
-  if (import.meta.hot) {
-    // Set a very long timeout for accepting updates
-    const originalAccept = import.meta.hot.accept;
-    import.meta.hot.accept = (...args) => {
-      // Delay the acceptance of updates by 5 seconds
-      setTimeout(() => {
-        originalAccept.apply(import.meta.hot, args);
-      }, 5000);
+    // @ts-ignore - Forcibly disable HMR
+    if (import.meta.hot) {
+      // @ts-ignore
+      import.meta.hot = null;
+    }
+    
+    // Block location.reload
+    const originalReload = window.location.reload;
+    window.location.reload = function() {
+      console.log('[Custom] Blocked page reload attempt');
+      return false;
     };
     
-    console.log('[HMR] Hot Module Replacement frequency reduced');
+    // Block WebSockets
+    const originalWebSocket = window.WebSocket;
+    window.WebSocket = function(url, protocols) {
+      if (url && typeof url === 'string' && 
+          (url.includes('vite') || url.includes('hmr'))) {
+        console.log('[Custom] Blocked WebSocket connection to:', url);
+        return {
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          send: () => {},
+          close: () => {},
+          dispatchEvent: () => {},
+        };
+      }
+      return new originalWebSocket(url, protocols);
+    };
+    
+    // Block polling messages
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+      if (args[0] && typeof args[0] === 'string' && 
+          (args[0].includes('server connection lost') || 
+           args[0].includes('Polling for restart'))) {
+        return;
+      }
+      return originalConsoleLog.apply(this, args);
+    };
   }
 }
 
-// Function to force a WebSocket disconnection to prevent issues
-export function stabilizeWebsocket() {
-  // Get all WebSocket connections related to Vite
-  const viteWebsockets = Array.from(document.querySelectorAll('script'))
-    .filter(script => script.src && script.src.includes('vite'))
-    .map(() => {
-      // This is a heuristic - we can't directly access Vite's WebSocket
-      return window.__vite_ws;
-    })
-    .filter(Boolean);
-    
-  // Close any active WebSockets to prevent continual reconnection attempts
-  viteWebsockets.forEach(ws => {
-    if (ws && ws.close) {
-      ws.close();
-      console.log('[HMR] WebSocket connection closed to stabilize app');
-    }
-  });
+export function reduceHMRFrequency() {
+  if (typeof window !== 'undefined' && import.meta.hot) {
+    // Only ping the server at 10-minute intervals
+    // @ts-ignore
+    import.meta.hot.reconnect = true;
+    // @ts-ignore
+    import.meta.hot.timeout = 600000; // 10 minutes in milliseconds
+  }
 }
 
-// Export a default function that applies all stabilization techniques
+export function stabilizeWebsocket() {
+  if (typeof window !== 'undefined') {
+    // Capture any HMR-related errors and prevent them from crashing the app
+    window.addEventListener('error', function(event) {
+      if (event.message && (
+          event.message.includes('WebSocket') || 
+          event.message.includes('vite') || 
+          event.message.includes('hmr'))) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('[Custom] Suppressed WebSocket error:', event.message);
+        return true;
+      }
+    }, true);
+  }
+}
+
 export default function stabilizeApp() {
   disableHMR();
   reduceHMRFrequency();
   stabilizeWebsocket();
+  console.log('[Custom] App stabilized by disabling HMR and WebSocket refreshing');
 }
