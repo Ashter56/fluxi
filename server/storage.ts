@@ -40,7 +40,7 @@ export interface IStorage {
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
-  getPendingTasksCount(): Promise<number>;
+  getPendingTasksCount(userId: number): Promise<number>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -263,13 +263,18 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(results.map(({ task }) => this.enrichTask(task)));
   }
   
-  async getPendingTasksCount(): Promise<number> {
+  async getPendingTasksCount(userId: number): Promise<number> {
     const result = await db
       .select({
         count: count()
       })
       .from(tasks)
-      .where(sql`${tasks.status} != 'done'`);
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          sql`${tasks.status} != 'done'`
+        )
+      );
     
     return result[0]?.count ?? 0;
   }

@@ -135,7 +135,6 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   };
 
   const getTaskContent = () => {
-    // Always show username, title, description, and status badge
     return (
       <div className="flex flex-col space-y-3 mb-3">
         <div className="flex items-start gap-2">
@@ -144,20 +143,31 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
             <AvatarFallback>{task.user.displayName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <p className="text-sm">
-              <span className="font-medium">{task.user.displayName}</span> has {taskStatus === "done" ? "completed" : taskStatus === "in_progress" ? "started work on" : "created"} the task:
-            </p>
-            <h3 className="font-semibold mt-1">{task.title}</h3>
+            {/* Only show status update text for in-progress and completed tasks */}
+            {taskStatus !== "pending" ? (
+              <p className="text-sm">
+                <span className="font-medium">{task.user.displayName}</span> has {taskStatus === "done" ? "completed" : "started work on"} the task:
+              </p>
+            ) : (
+              <p className="text-sm">
+                <span className="font-medium">{task.user.displayName}</span>
+              </p>
+            )}
+            
+            {/* Display title with status badge to the right */}
+            <div className="flex justify-between items-center mt-1">
+              <h3 className="font-semibold">{task.title}</h3>
+              <StatusBadge status={taskStatus} />
+            </div>
           </div>
         </div>
         
         {/* Always show task description */}
         <p className="text-muted-foreground text-sm">{task.description}</p>
         
-        {/* Status badge - styled by status */}
+        {/* Timestamp */}
         <div className="flex items-center">
-          <StatusBadge status={taskStatus} />
-          <span className="text-muted-foreground text-xs ml-2">
+          <span className="text-muted-foreground text-xs">
             {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
           </span>
         </div>
@@ -168,7 +178,7 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   return (
     <div 
       className={cn(
-        "bg-white rounded-xl shadow-sm overflow-hidden", 
+        "bg-white rounded-xl shadow-sm overflow-hidden max-w-md mx-auto w-full", 
         !detailed && "cursor-pointer hover:shadow-md transition-shadow"
       )}
       onClick={handleCardClick}

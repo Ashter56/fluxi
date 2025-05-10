@@ -7,11 +7,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  // Map status to appropriate color schemes
+  // Map status to appropriate color schemes with opaque colors and white text
   const statusStyles = {
-    pending: "bg-red-100 text-red-700 border-red-200",
-    in_progress: "bg-blue-100 text-blue-700 border-blue-200",
-    done: "bg-green-100 text-green-700 border-green-200",
+    pending: "bg-red-500 text-white border-red-600",
+    in_progress: "bg-blue-500 text-white border-blue-600",
+    done: "bg-green-500 text-white border-green-600",
   };
 
   // Map status to display text
