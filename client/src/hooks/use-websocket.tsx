@@ -66,27 +66,11 @@ export function useWebSocket() {
   
   // Handle like/unlike events from the WebSocket
   const handleLikeEvent = useCallback((data: TaskWithDetails & { action: 'like' | 'unlike' }) => {
-    // Try to update the task in the cache first
     const taskId = data.id;
-    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
     
-    if (currentTasks) {
-      const updatedTasks = currentTasks.map(task => 
-        task.id === taskId ? { ...task, likes: data.likes } : task
-      );
-      
-      // Update the cached tasks with the new like count
-      queryClient.setQueryData(['/api/tasks'], updatedTasks);
-    }
-    
-    // Also update the individual task cache if it exists
-    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
-    if (currentTask) {
-      queryClient.setQueryData(['/api/tasks', taskId], {
-        ...currentTask,
-        likes: data.likes
-      });
-    }
+    // Invalidate all task-related queries to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId] });
     
     // Notify subscribers
     notifyEventListeners(WebSocketEvent.LIKE, data);
@@ -96,20 +80,19 @@ export function useWebSocket() {
   
   // Handle new task events from the WebSocket
   const handleNewTaskEvent = useCallback((task: TaskWithDetails) => {
-    // Prepend the new task to the task list in the cache
-    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
+    // Instead of manually updating the cache, invalidate the tasks query
+    // This will trigger a refetch
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     
-    if (currentTasks) {
-      const updatedTasks = [task, ...currentTasks];
-      queryClient.setQueryData(['/api/tasks'], updatedTasks);
-      
-      // Show a toast notification for new tasks
-      if (user && task.userId !== user.id) {
-        toast({
-          title: "New Task",
-          description: `${task.user.displayName} created a new task: ${task.title}`,
-        });
-      }
+    // Also invalidate the pending count query to update the counter
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks/pending-count'] });
+    
+    // Show a toast notification for new tasks
+    if (user && task.userId !== user.id) {
+      toast({
+        title: "New Task",
+        description: `${task.user.displayName} created a new task: ${task.title}`,
+      });
     }
     
     // Notify subscribers
@@ -118,45 +101,34 @@ export function useWebSocket() {
   
   // Handle task status update events from the WebSocket
   const handleTaskStatusUpdateEvent = useCallback((task: TaskWithDetails) => {
-    // Update the task in the cache
     const taskId = task.id;
-    const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(['/api/tasks']);
     
-    if (currentTasks) {
-      const updatedTasks = currentTasks.map(t => 
-        t.id === taskId ? { ...t, status: task.status } : t
-      );
-      
-      queryClient.setQueryData(['/api/tasks'], updatedTasks);
-      
-      // Show a toast notification for task status updates (only for other users' tasks)
-      if (user && task.userId !== user.id) {
-        let statusText = "";
-        switch(task.status) {
-          case "pending":
-            statusText = "pending";
-            break;
-          case "in_progress":
-            statusText = "in progress";
-            break;
-          case "done":
-            statusText = "completed";
-            break;
-        }
-        
-        toast({
-          title: "Task Updated",
-          description: `${task.user.displayName} marked "${task.title}" as ${statusText}`,
-        });
+    // Instead of manually updating caches, invalidate the relevant queries
+    // This will trigger refetches that will pull fresh data from the server
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId] });
+    
+    // Also invalidate the pending count query to update the counter
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks/pending-count'] });
+    
+    // Show a toast notification for task status updates (only for other users' tasks)
+    if (user && task.userId !== user.id) {
+      let statusText = "";
+      switch(task.status) {
+        case "pending":
+          statusText = "pending";
+          break;
+        case "in_progress":
+          statusText = "in progress";
+          break;
+        case "done":
+          statusText = "completed";
+          break;
       }
-    }
-    
-    // Also update the individual task cache if it exists
-    const currentTask = queryClient.getQueryData<TaskWithDetails>(['/api/tasks', taskId]);
-    if (currentTask) {
-      queryClient.setQueryData(['/api/tasks', taskId], {
-        ...currentTask,
-        status: task.status
+      
+      toast({
+        title: "Task Updated",
+        description: `${task.user.displayName} marked "${task.title}" as ${statusText}`,
       });
     }
     
