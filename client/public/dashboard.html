@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxion Investor Analytics Dashboard</title>
+  
+  <!-- External CSS libraries -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  
+  <!-- Plausible Analytics as requested -->
+  <script defer data-domain="your.replit.app" src="https://plausible.io/js/script.js"></script>
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    .metric-card {
+      transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+    
+    /* Match the purple theme of the app */
+    .bg-primary {
+      background-color: #8B5CF6;
+    }
+    
+    .text-primary {
+      color: #8B5CF6;
+    }
+    
+    .border-primary {
+      border-color: #8B5CF6;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Header -->
+  <header class="bg-primary text-white shadow-lg">
+    <div class="container mx-auto px-4 py-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold">Fluxion</h1>
+          <p class="text-lg">Investor Analytics Dashboard</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span id="last-updated" class="text-sm">Last updated: Loading...</span>
+          <button id="refresh-btn" class="px-4 py-2 bg-white text-primary rounded-lg shadow hover:bg-gray-100">
+            Refresh Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Main content -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- Key Metrics Summary -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold mb-6">Key Metrics Summary</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Active Users Card -->
+        <div class="metric-card bg-white rounded-xl shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-500">Active Users</h3>
+          <div class="flex items-end mt-2">
+            <span id="mau-count" class="text-4xl font-bold">--</span>
+            <span class="ml-2 text-sm text-gray-500">Monthly</span>
+          </div>
+          <div class="flex mt-4 justify-between text-sm">
+            <div>
+              <div id="dau-count" class="font-semibold">--</div>
+              <div class="text-gray-500">Daily</div>
+            </div>
+            <div>
+              <div id="wau-count" class="font-semibold">--</div>
+              <div class="text-gray-500">Weekly</div>
+            </div>
+            <div>
+              <div id="stickiness" class="font-semibold">--</div>
+              <div class="text-gray-500">Stickiness</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Retention Card -->
+        <div class="metric-card bg-white rounded-xl shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-500">7-Day Retention</h3>
+          <div class="flex items-end mt-2">
+            <span id="retention-rate" class="text-4xl font-bold">--</span>
+            <span class="ml-2 text-sm text-gray-500">%</span>
+          </div>
+          <div class="mt-4 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Previous period:</span>
+              <span id="prev-retention" class="font-semibold">--</span>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-gray-500">Change:</span>
+              <span id="retention-change" class="font-semibold">--</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- K-Factor Card -->
+        <div class="metric-card bg-white rounded-xl shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-500">Viral Coefficient (K-Factor)</h3>
+          <div class="flex items-end mt-2">
+            <span id="k-factor" class="text-4xl font-bold">--</span>
+          </div>
+          <div class="mt-4 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Invites sent:</span>
+              <span id="invites-sent" class="font-semibold">--</span>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-gray-500">Invites per user:</span>
+              <span id="invites-per-user" class="font-semibold">--</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Task Completion Card -->
+        <div class="metric-card bg-white rounded-xl shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-500">Task Completion</h3>
+          <div class="flex items-end mt-2">
+            <span id="completion-rate" class="text-4xl font-bold">--</span>
+            <span class="ml-2 text-sm text-gray-500">%</span>
+          </div>
+          <div class="mt-4 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Tasks created:</span>
+              <span id="tasks-created" class="font-semibold">--</span>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-gray-500">Tasks completed:</span>
+              <span id="tasks-completed" class="font-semibold">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Charts Grid -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Active Users Chart -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-xl font-semibold mb-4">Active Users Trend</h3>
+        <div class="chart-container">
+          <canvas id="active-users-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Retention Chart -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-xl font-semibold mb-4">7-Day Retention by Cohort</h3>
+        <div class="chart-container">
+          <canvas id="retention-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Task Metrics Chart -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-xl font-semibold mb-4">Task Creation & Completion</h3>
+        <div class="chart-container">
+          <canvas id="task-metrics-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Virality Chart -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-xl font-semibold mb-4">Virality Metrics</h3>
+        <div class="chart-container">
+          <canvas id="virality-chart"></canvas>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Retention Cohort Grid -->
+    <section class="mt-8">
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-xl font-semibold mb-4">Cohort Retention Analysis</h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cohort
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Size
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Week 1
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Week 2
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Week 3
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Week 4
+                </th>
+              </tr>
+            </thead>
+            <tbody id="cohort-table-body" class="bg-white divide-y divide-gray-200">
+              <!-- Cohort data will be populated here by JavaScript -->
+              <tr>
+                <td colspan="6" class="px-4 py-4 text-center text-sm text-gray-500">
+                  Loading cohort data...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-6">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0">
+          <p>© 2025 Fluxion. All rights reserved.</p>
+        </div>
+        <div>
+          <button id="download-report-btn" class="px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-purple-700">
+            Download Investor Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </footer>
+  
+  <script>
+    // Mock data for the dashboard - would be replaced with actual API calls
+    // This is only for UI demonstration purposes
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set last updated time
+      document.getElementById('last-updated').innerText = 'Last updated: ' + new Date().toLocaleString();
+      
+      // Simulate API call to get data
+      fetchDashboardData();
+      
+      // Set up event listeners
+      document.getElementById('refresh-btn').addEventListener('click', fetchDashboardData);
+      document.getElementById('download-report-btn').addEventListener('click', downloadReport);
+    });
+    
+    function fetchDashboardData() {
+      // In a real application, this would be an API call
+      fetch('/api/analytics/dashboard')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          updateDashboard(data);
+        })
+        .catch(error => {
+          console.error('Failed to fetch dashboard data:', error);
+          // Show sample data since this is a demo
+          updateDashboard(getSampleData());
+        });
+    }
+    
+    function getSampleData() {
+      // Sample data structure that would come from the API
+      return {
+        activeUsers: {
+          dau: 156,
+          wau: 893,
+          mau: 2547,
+          stickiness: 6.12, // DAU/MAU as percentage
+          history: [
+            { date: '2025-04-10', dau: 142, wau: 820, mau: 2410 },
+            { date: '2025-04-11', dau: 149, wau: 845, mau: 2430 },
+            { date: '2025-04-12', dau: 138, wau: 860, mau: 2450 },
+            { date: '2025-04-13', dau: 145, wau: 875, mau: 2470 },
+            { date: '2025-04-14', dau: 150, wau: 885, mau: 2490 },
+            { date: '2025-04-15', dau: 153, wau: 890, mau: 2520 },
+            { date: '2025-04-16', dau: 156, wau: 893, mau: 2547 }
+          ]
+        },
+        retention: {
+          currentRate: 42.8,
+          previousRate: 38.5,
+          change: 4.3,
+          cohorts: [
+            { week: '2025-03-15', size: 320, rates: [100, 45, 38, 35, 33] },
+            { week: '2025-03-22', size: 290, rates: [100, 48, 40, 36] },
+            { week: '2025-03-29', size: 310, rates: [100, 46, 39] },
+            { week: '2025-04-05', size: 340, rates: [100, 47] },
+            { week: '2025-04-12', size: 360, rates: [100] }
+          ]
+        },
+        kFactor: {
+          current: 0.87,
+          invitesSent: 2210,
+          invitesPerUser: 0.87,
+          history: [
+            { date: '2025-03-15', value: 0.72 },
+            { date: '2025-03-22', value: 0.76 },
+            { date: '2025-03-29', value: 0.79 },
+            { date: '2025-04-05', value: 0.83 },
+            { date: '2025-04-12', value: 0.87 }
+          ]
+        },
+        taskCompletion: {
+          rate: 68.5,
+          tasksCreated: 8750,
+          tasksCompleted: 5994,
+          history: [
+            { date: '2025-03-15', created: 1200, completed: 780 },
+            { date: '2025-03-22', created: 1350, completed: 910 },
+            { date: '2025-03-29', created: 1450, completed: 990 },
+            { date: '2025-04-05', created: 1650, completed: 1120 },
+            { date: '2025-04-12', created: 1850, completed: 1270 }
+          ]
+        }
+      };
+    }
+    
+    function updateDashboard(data) {
+      // Update last updated time
+      document.getElementById('last-updated').innerText = 'Last updated: ' + new Date().toLocaleString();
+      
+      // Update metrics
+      updateActiveUsersMetrics(data.activeUsers);
+      updateRetentionMetrics(data.retention);
+      updateKFactorMetrics(data.kFactor);
+      updateTaskCompletionMetrics(data.taskCompletion);
+      
+      // Update charts
+      createActiveUsersChart(data.activeUsers.history);
+      createRetentionChart(data.retention.cohorts);
+      createTaskMetricsChart(data.taskCompletion.history);
+      createViralityChart(data.kFactor.history);
+      
+      // Update cohort table
+      createCohortTable(data.retention.cohorts);
+    }
+    
+    function updateActiveUsersMetrics(data) {
+      document.getElementById('dau-count').innerText = data.dau.toLocaleString();
+      document.getElementById('wau-count').innerText = data.wau.toLocaleString();
+      document.getElementById('mau-count').innerText = data.mau.toLocaleString();
+      document.getElementById('stickiness').innerText = data.stickiness.toFixed(1) + '%';
+    }
+    
+    function updateRetentionMetrics(data) {
+      document.getElementById('retention-rate').innerText = data.currentRate.toFixed(1);
+      document.getElementById('prev-retention').innerText = data.previousRate.toFixed(1) + '%';
+      
+      const changeElement = document.getElementById('retention-change');
+      const change = data.change.toFixed(1);
+      const isPositive = data.change > 0;
+      
+      changeElement.innerText = (isPositive ? '+' : '') + change + '%';
+      changeElement.className = 'font-semibold ' + (isPositive ? 'text-green-500' : 'text-red-500');
+    }
+    
+    function updateKFactorMetrics(data) {
+      document.getElementById('k-factor').innerText = data.current.toFixed(2);
+      document.getElementById('invites-sent').innerText = data.invitesSent.toLocaleString();
+      document.getElementById('invites-per-user').innerText = data.invitesPerUser.toFixed(2);
+    }
+    
+    function updateTaskCompletionMetrics(data) {
+      document.getElementById('completion-rate').innerText = data.rate.toFixed(1);
+      document.getElementById('tasks-created').innerText = data.tasksCreated.toLocaleString();
+      document.getElementById('tasks-completed').innerText = data.tasksCompleted.toLocaleString();
+    }
+    
+    function createActiveUsersChart(data) {
+      const ctx = document.getElementById('active-users-chart').getContext('2d');
+      
+      // Destroy previous chart instance if it exists
+      if (window.activeUsersChart) {
+        window.activeUsersChart.destroy();
+      }
+      
+      window.activeUsersChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [
+            {
+              label: 'DAU',
+              data: data.map(item => ({ x: new Date(item.date), y: item.dau })),
+              borderColor: '#8B5CF6',
+              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            },
+            {
+              label: 'WAU',
+              data: data.map(item => ({ x: new Date(item.date), y: item.wau })),
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            },
+            {
+              label: 'MAU',
+              data: data.map(item => ({ x: new Date(item.date), y: item.mau })),
+              borderColor: '#F59E0B',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'day'
+              }
+            },
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+    
+    function createRetentionChart(data) {
+      const ctx = document.getElementById('retention-chart').getContext('2d');
+      
+      // Destroy previous chart instance if it exists
+      if (window.retentionChart) {
+        window.retentionChart.destroy();
+      }
+      
+      // Format data for chart
+      const labels = data.map(cohort => {
+        const date = new Date(cohort.week);
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      });
+      
+      // Get week 1 retention rates (index 1 in the rates array)
+      const week1Rates = data.map(cohort => cohort.rates[1] || 0);
+      
+      window.retentionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Week 1 Retention (%)',
+            data: week1Rates,
+            backgroundColor: 'rgba(139, 92, 246, 0.7)',
+            borderColor: '#8B5CF6',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    function createTaskMetricsChart(data) {
+      const ctx = document.getElementById('task-metrics-chart').getContext('2d');
+      
+      // Destroy previous chart instance if it exists
+      if (window.taskMetricsChart) {
+        window.taskMetricsChart.destroy();
+      }
+      
+      window.taskMetricsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(item => {
+            const date = new Date(item.date);
+            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          }),
+          datasets: [
+            {
+              label: 'Tasks Created',
+              data: data.map(item => item.created),
+              backgroundColor: 'rgba(16, 185, 129, 0.7)',
+              borderColor: '#10B981',
+              borderWidth: 1
+            },
+            {
+              label: 'Tasks Completed',
+              data: data.map(item => item.completed),
+              backgroundColor: 'rgba(245, 158, 11, 0.7)',
+              borderColor: '#F59E0B',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+    
+    function createViralityChart(data) {
+      const ctx = document.getElementById('virality-chart').getContext('2d');
+      
+      // Destroy previous chart instance if it exists
+      if (window.viralityChart) {
+        window.viralityChart.destroy();
+      }
+      
+      window.viralityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'K-Factor',
+            data: data.map(item => ({ x: new Date(item.date), y: item.value })),
+            borderColor: '#8B5CF6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'week'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              suggestedMax: 1.5
+            }
+          }
+        }
+      });
+    }
+    
+    function createCohortTable(cohorts) {
+      const tableBody = document.getElementById('cohort-table-body');
+      
+      // Clear existing rows
+      tableBody.innerHTML = '';
+      
+      // Add a row for each cohort
+      cohorts.forEach(cohort => {
+        const row = document.createElement('tr');
+        
+        // Format cohort date
+        const cohortDate = new Date(cohort.week);
+        const formattedDate = cohortDate.toLocaleDateString(undefined, { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        
+        // Create cells
+        row.innerHTML = `
+          <td class="px-4 py-4 whitespace-nowrap">
+            <div class="text-sm font-medium text-gray-900">${formattedDate}</div>
+          </td>
+          <td class="px-4 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">${cohort.size}</div>
+          </td>
+          ${cohort.rates.slice(1, 5).map((rate, index) => {
+            const colorClass = rate >= 40 ? 'text-green-600' : 
+                              rate >= 25 ? 'text-yellow-600' : 'text-red-600';
+            return `
+              <td class="px-4 py-4 whitespace-nowrap">
+                <div class="text-sm ${colorClass} font-medium">${rate || '-'}%</div>
+              </td>
+            `;
+          }).join('')}
+        `;
+        
+        // Add missing weeks if needed
+        const missingWeeks = 4 - cohort.rates.slice(1).length;
+        if (missingWeeks > 0) {
+          for (let i = 0; i < missingWeeks; i++) {
+            const cell = document.createElement('td');
+            cell.className = 'px-4 py-4 whitespace-nowrap';
+            cell.innerHTML = `<div class="text-sm text-gray-400">-</div>`;
+            row.appendChild(cell);
+          }
+        }
+        
+        tableBody.appendChild(row);
+      });
+    }
+    
+    function downloadReport() {
+      // In a real app, this would trigger an API call to generate a report
+      alert('Generating investor report CSV. This would download data in a real implementation.');
+      
+      // Simulate API call
+      fetch('/api/analytics/download-report', {
+        method: 'POST'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to generate report');
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        // Create a temporary link and trigger download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'fluxion_investor_report.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(error => {
+        console.error('Error downloading report:', error);
+        alert('Failed to download report. Please try again later.');
+      });
+    }
+  </script>
+</body>
+</html>
