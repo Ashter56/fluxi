@@ -89,7 +89,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.get("/api/tasks/pending-count", async (req: Request, res: Response) => {
-    const count = await storage.getPendingTasksCount();
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    const count = await storage.getPendingTasksCount(req.user.id);
     res.json({ count });
   });
   
