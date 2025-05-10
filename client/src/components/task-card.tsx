@@ -244,7 +244,30 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
       )}
       onClick={handleCardClick}
     >
-      <div className="p-4">
+      <div className="p-4 relative">
+        {/* Three-dot menu is positioned at top-right corner now */}
+        {user && (task.userId === user.id || isAdmin) && (
+          <div className="absolute top-2 right-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center text-muted-foreground hover:text-primary">
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/* Delete option for both owner and admin */}
+                <DropdownMenuItem 
+                  onClick={handleDeleteClick}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isAdmin && task.userId !== user.id ? "Remove (Admin)" : "Delete"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+        
         {getTaskContent()}
         
         {task.imageUrl && (
@@ -281,33 +304,14 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
             <span className="text-sm">{likeCount}</span>
           </button>
           
-          {/* Show dropdown menu options for user's own tasks or for admins */}
-          {user && (task.userId === user.id || isAdmin) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 text-muted-foreground hover:text-primary">
-                  <MoreVertical className="h-5 w-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* Edit option is only for task owner */}
-                {task.userId === user.id && (
-                  <DropdownMenuItem onClick={handleUpdateClick}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                )}
-                
-                {/* Delete option for both owner and admin */}
-                <DropdownMenuItem 
-                  onClick={handleDeleteClick}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {isAdmin && task.userId !== user.id ? "Remove (Admin)" : "Delete"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Status update button for task owner */}
+          {user && task.userId === user.id && (
+            <button 
+              className="flex items-center gap-1 text-muted-foreground hover:text-primary"
+              onClick={handleUpdateClick}
+            >
+              <Edit className="h-5 w-5" />
+            </button>
           )}
           
           <button 

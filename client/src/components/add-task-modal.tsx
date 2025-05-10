@@ -76,26 +76,13 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
-      // In a real-world scenario, we would upload the image to a server
-      // and get a permanent URL. For now, we'll use data URLs for persistence
-      
-      // If we have a selected image, create a data URL
-      if (selectedImage) {
-        return new Promise<Response>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            // Replace the temporary object URL with a data URL that can persist
-            const dataUrl = event.target?.result as string;
-            const taskData = { ...data, imageUrl: dataUrl };
-            
-            // Now send the task with the data URL
-            const res = await apiRequest("POST", "/api/tasks", taskData);
-            resolve(res);
-          };
-          
-          // Read the image as a data URL
-          reader.readAsDataURL(selectedImage);
-        }).then(res => res.json());
+      // Use the preview URL directly if it exists, which is much faster
+      // than converting to DataURL during submission
+      if (previewUrl && selectedImage) {
+        // Just use the existing previewUrl that we already created
+        const taskData = { ...data, imageUrl: previewUrl };
+        const res = await apiRequest("POST", "/api/tasks", taskData);
+        return res.json();
       } else {
         // No image selected, proceed normally
         const res = await apiRequest("POST", "/api/tasks", data);
