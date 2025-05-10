@@ -83,7 +83,7 @@ export class DatabaseStorage implements IStorage {
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select()
       .from(tasks)
-      .orderBy(desc(tasks.updatedAt)); // Sort by most recently updated first
+      .orderBy(desc(tasks.createdAt)); // Sort by most recently created first
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
@@ -97,7 +97,7 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.userId, userId))
-      .orderBy(desc(tasks.updatedAt)); // Sort by most recently updated first
+      .orderBy(desc(tasks.createdAt)); // Sort by most recently created first
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
@@ -120,8 +120,8 @@ export class DatabaseStorage implements IStorage {
         // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
         
-        // When status changes, update the updatedAt timestamp to bring it to the top of the feed
-        update.updatedAt = new Date();
+        // When status changes, update the createdAt timestamp to bring it to the top of the feed
+        update.createdAt = new Date();
       } else {
         delete update.status; // Remove invalid status
       }

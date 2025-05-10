@@ -225,8 +225,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    // Check task ownership
-    if (task.userId !== req.user.id) {
+    // Check task ownership - allow Ashter Abbas (admin) to delete any task
+    const isAdmin = req.user.username === "ashterabbas";
+    if (task.userId !== req.user.id && !isAdmin) {
       return res.status(403).json({ message: "You cannot delete this task" });
     }
     
