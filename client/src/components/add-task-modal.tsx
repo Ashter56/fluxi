@@ -76,8 +76,31 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
-      const res = await apiRequest("POST", "/api/tasks", data);
-      return res.json();
+      // In a real-world scenario, we would upload the image to a server
+      // and get a permanent URL. For now, we'll use data URLs for persistence
+      
+      // If we have a selected image, create a data URL
+      if (selectedImage) {
+        return new Promise<Response>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            // Replace the temporary object URL with a data URL that can persist
+            const dataUrl = event.target?.result as string;
+            const taskData = { ...data, imageUrl: dataUrl };
+            
+            // Now send the task with the data URL
+            const res = await apiRequest("POST", "/api/tasks", taskData);
+            resolve(res);
+          };
+          
+          // Read the image as a data URL
+          reader.readAsDataURL(selectedImage);
+        }).then(res => res.json());
+      } else {
+        // No image selected, proceed normally
+        const res = await apiRequest("POST", "/api/tasks", data);
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast({
@@ -86,7 +109,15 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/pending-count"] });
+      
+      // Clean up any object URLs we created to prevent memory leaks
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      
       form.reset();
+      setPreviewUrl(null);
+      setSelectedImage(null);
       onClose();
     },
     onError: () => {
@@ -132,14 +163,8 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   };
 
   const onSubmit = (data: TaskFormValues) => {
-    // In a real app, we would upload the image to a server first
-    // and get back a URL to use in the task
+    // Submit the form data to create the task
     createTaskMutation.mutate(data);
-    
-    // Clean up any object URLs we created to prevent memory leaks
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
   };
 
   return (
@@ -175,7 +200,11 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                     <Textarea 
                       placeholder="What needs to be done?" 
                       rows={3}
-                      {...field} 
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value || ''}
                     />
                   </FormControl>
                   <FormMessage />

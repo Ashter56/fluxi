@@ -43,6 +43,9 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { user } = useAuth();
+  
+  // Check if current user is an admin (Ashter Abbas is admin)
+  const isAdmin = user && user.username === "ashterabbas";
   const { connected } = useWebSocketStatus();
   const { toast } = useToast();
   
@@ -276,23 +279,33 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
             <span className="text-sm">{likeCount}</span>
           </button>
           
-          {/* Show edit and delete buttons if this is the user's own task */}
-          {user && task.userId === user.id && (
-            <>
-              <button 
-                className="flex items-center gap-1 text-muted-foreground hover:text-secondary"
-                onClick={handleUpdateClick}
-              >
-                <Edit className="h-5 w-5" />
-              </button>
-              <button 
-                className="flex items-center gap-1 text-muted-foreground hover:text-destructive"
-                onClick={handleDeleteClick}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
-            </>
+          {/* Show dropdown menu options for user's own tasks or for admins */}
+          {user && (task.userId === user.id || isAdmin) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 text-muted-foreground hover:text-primary">
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/* Edit option is only for task owner */}
+                {task.userId === user.id && (
+                  <DropdownMenuItem onClick={handleUpdateClick}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Delete option for both owner and admin */}
+                <DropdownMenuItem 
+                  onClick={handleDeleteClick}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isAdmin && task.userId !== user.id ? "Remove (Admin)" : "Delete"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           
           <button 
