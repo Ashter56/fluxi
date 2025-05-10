@@ -60,6 +60,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   // For image upload
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form setup
@@ -116,18 +117,100 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
     },
   });
 
-  // Handle image selection
+  // Handle image selection with optimization
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Create a preview URL
-    const url = URL.createObjectURL(file);
-    setSelectedImage(file);
-    setPreviewUrl(url);
+    // Show loading state
+    setIsProcessingImage(true);
     
-    // Update the form with the preview URL
-    form.setValue("imageUrl", url);
+    // Create a temporary preview URL immediately for better UX
+    const tempUrl = URL.createObjectURL(file);
+    setPreviewUrl(tempUrl);
+    
+    // Use setTimeout to allow UI to update with loading state before heavy processing
+    setTimeout(() => {
+      // Compress/optimize the image before using it
+      const img = document.createElement('img');
+      img.onload = () => {
+        try {
+          // Create a canvas to resize and compress the image
+          const canvas = document.createElement('canvas');
+          
+          // Max dimensions - balance between quality and performance
+          const MAX_WIDTH = 1000;
+          const MAX_HEIGHT = 1000;
+          
+          // Calculate new dimensions while maintaining aspect ratio
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round(height * (MAX_WIDTH / width));
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round(width * (MAX_HEIGHT / height));
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          // Set canvas dimensions and draw the resized image
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to optimized data URL with low quality for better performance
+            const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            
+            // Update state with the optimized image
+            setSelectedImage(file); // Keep original file reference for type checking
+            setPreviewUrl(optimizedDataUrl);
+            
+            // Update form value with optimized image
+            form.setValue("imageUrl", optimizedDataUrl);
+          }
+        } catch (err) {
+          console.error('Error processing image:', err);
+          toast({
+            title: "Image processing error",
+            description: "There was a problem processing your image. Please try a smaller image.",
+            variant: "destructive"
+          });
+          // Keep the original file as fallback
+          setSelectedImage(file);
+          form.setValue("imageUrl", tempUrl);
+        } finally {
+          // Clean up the temporary preview
+          // URL.revokeObjectURL(tempUrl); - Don't revoke if we're using it as fallback
+          
+          // Hide loading state
+          setIsProcessingImage(false);
+        }
+      };
+      
+      // Handle errors during image loading
+      img.onerror = () => {
+        setIsProcessingImage(false);
+        toast({
+          title: "Image loading error",
+          description: "Could not load the selected image. Please try another one.",
+          variant: "destructive"
+        });
+        setPreviewUrl(null);
+        setSelectedImage(null);
+        form.setValue("imageUrl", "");
+      };
+      
+      // Load the image to trigger the optimization process
+      img.src = tempUrl;
+    }, 100); // Short delay for better UI responsiveness
   };
   
   // Trigger file input click
@@ -139,13 +222,21 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   
   // Clear selected image
   const clearSelectedImage = () => {
-    setSelectedImage(null);
-    setPreviewUrl(null);
-    form.setValue("imageUrl", "");
-    
-    // Reset the file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    // Only allow clearing if not currently processing
+    if (!isProcessingImage) {
+      if (previewUrl) {
+        // Clean up the object URL to prevent memory leaks
+        URL.revokeObjectURL(previewUrl);
+      }
+      
+      setSelectedImage(null);
+      setPreviewUrl(null);
+      form.setValue("imageUrl", "");
+      
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -249,10 +340,19 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                         alt="Task preview" 
                         className="w-full h-48 object-cover"
                       />
+                      {isProcessingImage && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <div className="flex flex-col items-center">
+                            <div className="h-8 w-8 rounded-full border-4 border-t-transparent border-primary animate-spin"></div>
+                            <p className="text-white mt-2 font-medium">Optimizing image...</p>
+                          </div>
+                        </div>
+                      )}
                       <button 
                         type="button"
                         className="absolute top-2 right-2 bg-destructive text-white p-1 rounded-full"
                         onClick={clearSelectedImage}
+                        disabled={isProcessingImage}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -285,9 +385,11 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
               </Button>
               <Button 
                 type="submit"
-                disabled={createTaskMutation.isPending}
+                disabled={createTaskMutation.isPending || isProcessingImage}
               >
-                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                {createTaskMutation.isPending 
+                  ? "Creating..." 
+                  : (isProcessingImage ? "Processing Image..." : "Create Task")}
               </Button>
             </DialogFooter>
           </form>
