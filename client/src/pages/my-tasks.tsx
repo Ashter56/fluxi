@@ -43,7 +43,7 @@ export function MyTasks() {
     <>
       <Header title="My Tasks" />
       
-      <main className="container p-4 pb-20">
+      <main className="p-4 pb-20">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">My Tasks</h2>
           <Button 

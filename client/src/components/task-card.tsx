@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Heart, MessageSquare, Share2, Edit } from "lucide-react";
+import { Heart, MessageSquare, Share2, Edit, Trash2 } from "lucide-react";
 import { type TaskWithDetails } from "@shared/schema";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,16 @@ import { UpdateTaskModal } from "./update-task-modal";
 import { useAuth } from "@/hooks/auth-provider";
 import { useWebSocketStatus } from "@/hooks/websocket-provider";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TaskCardProps {
   task: TaskWithDetails;
