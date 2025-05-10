@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { type TaskWithDetails, type CommentWithUser } from "@shared/schema";
+import { type TaskWithDetails, type CommentWithUser, type User } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +34,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose }: TaskDetailModalProp
   const [newComment, setNewComment] = useState("");
   
   // Get current user
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/users/current"],
   });
   
@@ -42,12 +42,16 @@ export function TaskDetailModal({ taskId, isOpen, onClose }: TaskDetailModalProp
   const { data: task, isLoading: isLoadingTask } = useQuery<TaskWithDetails>({
     queryKey: [`/api/tasks/${taskId}`],
     enabled: isOpen && !!taskId,
+    staleTime: 0, // Always consider data stale
+    refetchInterval: 2000, // Refresh every 2 seconds
   });
   
   // Get task comments
   const { data: comments = [], isLoading: isLoadingComments } = useQuery<CommentWithUser[]>({
     queryKey: [`/api/tasks/${taskId}/comments`],
     enabled: isOpen && !!taskId,
+    staleTime: 0, // Always consider data stale
+    refetchInterval: 2000, // Refresh every 2 seconds
   });
   
   // Add comment mutation
@@ -155,8 +159,8 @@ export function TaskDetailModal({ taskId, isOpen, onClose }: TaskDetailModalProp
             <div className="border-t p-4">
               <form onSubmit={handleSubmitComment} className="flex gap-2">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={currentUser.avatarUrl} alt={currentUser.displayName} />
-                  <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={currentUser.avatarUrl || undefined} alt={currentUser.displayName || 'User'} />
+                  <AvatarFallback>{(currentUser.displayName || 'U').charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 relative">
                   <Input

@@ -3,15 +3,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/add-task-modal";
 
+interface PendingCountResponse {
+  count: number;
+}
+
 export function TaskCounter() {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   
-  const { data: pendingCount, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<PendingCountResponse>({
     queryKey: ["/api/tasks/pending-count"],
-    select: (data) => data.count,
     staleTime: 0, // Always consider data stale
     refetchInterval: 5000, // Refresh every 5 seconds
   });
+  
+  const pendingCount = data?.count || 0;
   
   return (
     <>
