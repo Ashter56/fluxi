@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Heart, MessageSquare, Share2, Edit } from "lucide-react";
 import { type TaskWithDetails } from "@shared/schema";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -135,39 +135,34 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   };
 
   const getTaskContent = () => {
-    if (task.title && task.description) {
-      return (
-        <div className="mb-3">
-          <h3 className="font-semibold">{task.title}</h3>
-          {detailed && (
-            <p className="text-muted-foreground mt-1">{task.description}</p>
-          )}
-        </div>
-      );
-    } else {
-      // Activity style display
-      return (
-        <div className="flex items-start gap-2 mb-3">
+    // Always show username, title, description, and status badge
+    return (
+      <div className="flex flex-col space-y-3 mb-3">
+        <div className="flex items-start gap-2">
           <Avatar className="w-8 h-8">
             <AvatarImage src={task.user.avatarUrl || ""} alt={task.user.displayName} />
             <AvatarFallback>{task.user.displayName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <p className="text-sm">
-              <span className="font-medium">{task.user.displayName}</span> has {taskStatus === "done" ? "completed" : "created"} the task '{task.title}'
+              <span className="font-medium">{task.user.displayName}</span> has {taskStatus === "done" ? "completed" : taskStatus === "in_progress" ? "started work on" : "created"} the task:
             </p>
-            <div className="mt-1 flex items-center">
-              <StatusBadge status={taskStatus} />
-              {detailed && (
-                <span className="text-muted-foreground text-sm ml-2">
-                  {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
-                </span>
-              )}
-            </div>
+            <h3 className="font-semibold mt-1">{task.title}</h3>
           </div>
         </div>
-      );
-    }
+        
+        {/* Always show task description */}
+        <p className="text-muted-foreground text-sm">{task.description}</p>
+        
+        {/* Status badge - styled by status */}
+        <div className="flex items-center">
+          <StatusBadge status={taskStatus} />
+          <span className="text-muted-foreground text-xs ml-2">
+            {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   return (
