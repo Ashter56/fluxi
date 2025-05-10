@@ -57,13 +57,10 @@ interface AddTaskModalProps {
 export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   const { toast } = useToast();
   
-  // Task images (would be actual image uploads in a real app)
-  const taskImages = [
-    "https://images.unsplash.com/photo-1586281380117-5a60ae2050cc", // sticky notes
-    "https://images.unsplash.com/photo-1606327054629-64c8b0fd6e4f", // calendar planning
-    "https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e", // UI mockup
-    "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b", // laptop workspace
-  ];
+  // For image upload
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useState<HTMLInputElement | null>(null)[1];
 
   // Form setup
   const form = useForm<TaskFormValues>({

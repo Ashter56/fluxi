@@ -35,8 +35,10 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const [likeCount, setLikeCount] = useState(task.likes);
   const [taskStatus, setTaskStatus] = useState(task.status);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { user } = useAuth();
   const { connected } = useWebSocketStatus();
+  const { toast } = useToast();
   
   // Initialize state from localStorage and props
   useEffect(() => {
@@ -115,6 +117,35 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
       }
     },
   });
+  
+  // Delete task mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/tasks/${task.id}`);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch tasks after deletion
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/pending-count"] });
+      
+      toast({
+        title: "Task deleted",
+        description: "Your task has been successfully deleted",
+      });
+      
+      // If we're on the detailed view, navigate back to home
+      if (detailed) {
+        navigate("/");
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete task. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -142,6 +173,15 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const handleUpdateClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowUpdateModal(true);
+  };
+  
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteDialog(true);
+  };
+  
+  const confirmDelete = () => {
+    deleteMutation.mutate();
   };
 
   const getTaskContent = () => {
@@ -230,14 +270,23 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
             <span className="text-sm">{likeCount}</span>
           </button>
           
-          {/* Show edit button if this is the user's own task */}
+          {/* Show edit and delete buttons if this is the user's own task */}
           {user && task.userId === user.id && (
-            <button 
-              className="flex items-center gap-1 text-muted-foreground hover:text-secondary"
-              onClick={handleUpdateClick}
-            >
-              <Edit className="h-5 w-5" />
-            </button>
+            <>
+              <button 
+                className="flex items-center gap-1 text-muted-foreground hover:text-secondary"
+                onClick={handleUpdateClick}
+              >
+                <Edit className="h-5 w-5" />
+              </button>
+              <button 
+                className="flex items-center gap-1 text-muted-foreground hover:text-destructive"
+                onClick={handleDeleteClick}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </>
           )}
           
           <button 
@@ -257,6 +306,27 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
         taskTitle={task.title}
         currentStatus={task.status}
       />
+      
+      {/* Delete Task Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the task "{task.title}" and remove it from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
