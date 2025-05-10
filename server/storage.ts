@@ -81,7 +81,9 @@ export class DatabaseStorage implements IStorage {
   
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
-    const taskList = await db.select().from(tasks);
+    const taskList = await db.select()
+      .from(tasks)
+      .orderBy(desc(tasks.updatedAt)); // Sort by most recently updated first
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
@@ -92,7 +94,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
-    const userTasks = await db.select().from(tasks).where(eq(tasks.userId, userId));
+    const userTasks = await db.select()
+      .from(tasks)
+      .where(eq(tasks.userId, userId))
+      .orderBy(desc(tasks.updatedAt)); // Sort by most recently updated first
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
