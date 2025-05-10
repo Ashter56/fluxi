@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Heart, MessageSquare, Share2, Edit, Trash2 } from "lucide-react";
+import { Heart, MessageSquare, Share2, Edit, Trash2, MoreVertical } from "lucide-react";
 import { type TaskWithDetails } from "@shared/schema";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TaskCardProps {
   task: TaskWithDetails;

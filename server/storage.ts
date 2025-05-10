@@ -114,6 +114,9 @@ export class DatabaseStorage implements IStorage {
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
         // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
+        
+        // When status changes, update the updatedAt timestamp to bring it to the top of the feed
+        update.updatedAt = new Date();
       } else {
         delete update.status; // Remove invalid status
       }

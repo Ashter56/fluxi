@@ -185,6 +185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cast status as TaskStatus if present
       if (taskUpdate.status) {
         taskUpdate.status = taskUpdate.status as TaskStatus;
+        
+        // Update the timestamp by adding a SQL query parameter
+        // We handle this on the database side in the updateTask method
       }
       
       const updatedTask = await storage.updateTask(taskId, taskUpdate);
