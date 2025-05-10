@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,7 +60,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   // For image upload
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useState<HTMLInputElement | null>(null)[1];
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form setup
   const form = useForm<TaskFormValues>({
@@ -98,8 +98,48 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
     },
   });
 
+  // Handle image selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Create a preview URL
+    const url = URL.createObjectURL(file);
+    setSelectedImage(file);
+    setPreviewUrl(url);
+    
+    // Update the form with the preview URL
+    form.setValue("imageUrl", url);
+  };
+  
+  // Trigger file input click
+  const openFileSelector = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  
+  // Clear selected image
+  const clearSelectedImage = () => {
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    form.setValue("imageUrl", "");
+    
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const onSubmit = (data: TaskFormValues) => {
+    // In a real app, we would upload the image to a server first
+    // and get back a URL to use in the task
     createTaskMutation.mutate(data);
+    
+    // Clean up any object URLs we created to prevent memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
   };
 
   return (
@@ -175,33 +215,45 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Task Image</FormLabel>
-                  <div className="grid grid-cols-2 gap-2">
-                    {taskImages.map((imageUrl) => (
-                      <div 
-                        key={imageUrl}
-                        className={`
-                          relative rounded-md overflow-hidden border-2 cursor-pointer
-                          ${field.value === imageUrl ? 'border-primary' : 'border-transparent'}
-                        `}
-                        onClick={() => field.onChange(imageUrl)}
+                  
+                  {/* Hidden file input */}
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                    ref={fileInputRef}
+                  />
+                  
+                  {/* Image preview or upload button */}
+                  {previewUrl ? (
+                    <div className="relative rounded-md overflow-hidden border-2 border-primary">
+                      <img 
+                        src={previewUrl} 
+                        alt="Task preview" 
+                        className="w-full h-48 object-cover"
+                      />
+                      <button 
+                        type="button"
+                        className="absolute top-2 right-2 bg-destructive text-white p-1 rounded-full"
+                        onClick={clearSelectedImage}
                       >
-                        <img 
-                          src={imageUrl} 
-                          alt="Task visual" 
-                          className="w-full h-24 object-cover"
-                        />
-                        {field.value === imageUrl && (
-                          <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div 
+                      className="border-2 border-dashed border-muted-foreground/50 rounded-md p-8 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={openFileSelector}
+                    >
+                      <Image className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground text-center">
+                        Click to upload an image for your task<br />
+                        <span className="text-xs">JPG, PNG, or GIF up to 5MB</span>
+                      </p>
+                    </div>
+                  )}
+                  
                   <FormMessage />
                 </FormItem>
               )}
