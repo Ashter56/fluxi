@@ -9,6 +9,8 @@ export function TaskCounter() {
   const { data: pendingCount, isLoading } = useQuery({
     queryKey: ["/api/tasks/pending-count"],
     select: (data) => data.count,
+    staleTime: 0, // Always consider data stale
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
   
   return (

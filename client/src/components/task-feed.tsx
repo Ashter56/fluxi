@@ -11,13 +11,19 @@ export function TaskFeed() {
   
   const { data: tasks, isLoading, error } = useQuery<TaskWithDetails[]>({
     queryKey: ["/api/tasks"],
-    staleTime: 10 * 60 * 1000, // Keep the data fresh for 10 minutes
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
   
   // Handle WebSocket events to update our React Query cache
   useEffect(() => {
     // When a new task is created
     const newTaskHandler = (newTask: TaskWithDetails) => {
+      // Force refetch tasks to ensure we always have the latest data
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/pending-count"] });
+      
+      // Also update the cache immediately for a faster UI response
       const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
       if (currentTasks) {
         // If the task already exists, don't add it again
@@ -32,6 +38,12 @@ export function TaskFeed() {
     
     // When a task's status is updated
     const statusUpdateHandler = (updatedTask: TaskWithDetails) => {
+      // Force refetch tasks
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", updatedTask.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/pending-count"] });
+      
+      // Also update the cache immediately for a faster UI response
       const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
       if (currentTasks) {
         const updatedTasks = currentTasks.map(task => 
@@ -45,6 +57,11 @@ export function TaskFeed() {
     
     // When a task is liked/unliked
     const likeHandler = (likeData: { taskId: number, count: number, liked: boolean }) => {
+      // Force refetch tasks
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", likeData.taskId] });
+      
+      // Also update the cache immediately for a faster UI response
       const currentTasks = queryClient.getQueryData<TaskWithDetails[]>(["/api/tasks"]);
       if (currentTasks) {
         const updatedTasks = currentTasks.map(task => 
