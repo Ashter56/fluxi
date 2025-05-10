@@ -246,6 +246,7 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
     >
       <div className="p-4 relative">
         {/* Three-dot menu is positioned at top-right corner now */}
+        {/* Only show the menu for task owners or if user is admin */}
         {user && (task.userId === user.id || isAdmin) && (
           <div className="absolute top-2 right-2">
             <DropdownMenu>
@@ -255,7 +256,6 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Delete option for both owner and admin */}
                 <DropdownMenuItem 
                   onClick={handleDeleteClick}
                   className="text-destructive focus:text-destructive"
