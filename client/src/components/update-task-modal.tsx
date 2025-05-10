@@ -78,7 +78,10 @@ export function UpdateTaskModal({
         description: "Your task has been updated successfully.",
       });
       
-      // Update the tasks in the cache directly
+      // The server will broadcast this update to all clients
+      // through the WebSocketEvent.TASK_STATUS_UPDATE event
+      
+      // Update the tasks in the cache directly for immediate feedback
       const currentTasks = queryClient.getQueryData<any[]>(["/api/tasks"]);
       if (currentTasks) {
         const updatedTasks = currentTasks.map(task => 
