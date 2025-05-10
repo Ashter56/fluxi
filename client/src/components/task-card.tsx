@@ -10,6 +10,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { UpdateTaskModal } from "./update-task-modal";
+import { ShareTaskModal } from "./share-task-modal";
 import { useAuth } from "@/hooks/auth-provider";
 import { useWebSocketStatus } from "@/hooks/websocket-provider";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,7 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
   const [taskStatus, setTaskStatus] = useState(task.status);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const { user } = useAuth();
   
   // Check if current user is an admin (Ashter Abbas is admin)
@@ -176,7 +178,7 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
 
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Share functionality could be implemented here
+    setShowShareModal(true);
   };
   
   const handleUpdateClick = (e: React.MouseEvent) => {
@@ -324,6 +326,14 @@ export function TaskCard({ task, detailed = false }: TaskCardProps) {
         taskId={task.id}
         taskTitle={task.title}
         currentStatus={task.status}
+      />
+      
+      {/* Share Task Modal */}
+      <ShareTaskModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        taskId={task.id}
+        taskTitle={task.title}
       />
       
       {/* Delete Task Confirmation Dialog */}
