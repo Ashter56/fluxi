@@ -12,6 +12,8 @@ import {
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
+// Import analytics API router
+const analyticsRouter = require('../analytics-api');
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication

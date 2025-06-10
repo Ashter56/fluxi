@@ -18,6 +18,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+// 🔽🔽🔽 ADD THIS LINE (should be at line 17) 🔽🔽🔽
+const { trackDailyUser } = require("../analytics");
+
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -29,16 +32,15 @@ export default function LoginPage() {
   const { user, loginMutation } = useAuth();
   const { toast } = useToast();
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(false);
-  
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "testuser",  // Pre-fill with test user
-      password: "password123",  // Pre-fill with test password
+      username: "testuser",
+      password: "password123",
     },
   });
-  
-  // If user is already logged in or login just succeeded, redirect to homepage
+
   if (user || redirectAfterLogin) {
     return <Redirect to="/" />;
   }
@@ -46,7 +48,6 @@ export default function LoginPage() {
   const handleLogin = async (data: LoginFormValues) => {
     try {
       console.log("Attempting login with:", data);
-      // Direct approach bypassing the mutation if needed
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
@@ -55,30 +56,30 @@ export default function LoginPage() {
         body: JSON.stringify(data),
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         const userData = await response.json();
         console.log("Login success, user data:", userData);
-        
+
         // Update the cache manually
         queryClient.setQueryData(["/api/user"], userData);
-        
+
+        // 🔼🔼🔼 ADD THIS LINE (should be at line 71) 🔼🔼🔼
+        trackDailyUser(userData.id);
+
         toast({
           title: "Login successful",
           description: `Welcome back, ${userData.displayName}!`,
         });
-        
-        // Redirect to homepage after successful login
+
         setRedirectAfterLogin(true);
       } else {
         let errorText = await response.text();
         try {
           const errorJson = JSON.parse(errorText);
           errorText = errorJson.message || errorText;
-        } catch (e) {
-          // If parsing fails, use the text as is
-        }
-        
+        } catch (e) {}
+
         toast({
           title: "Login failed",
           description: errorText,
@@ -89,7 +90,7 @@ export default function LoginPage() {
       console.error("Login error:", error);
       toast({
         title: "Login Error",
-        description: error instanceof Error ? error.message : "Failed to login. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to login.",
         variant: "destructive",
       });
     }
@@ -118,7 +119,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Username or Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your username or email" {...field} />
+                      <Input placeholder="Enter your username/email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -131,7 +132,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter your password" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -149,7 +150,7 @@ export default function LoginPage() {
           </Form>
 
           <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
+            <span className="text-muted-foreground">No account? </span>
             <Link href="/register" className="text-primary hover:underline font-medium">
               Register
             </Link>
