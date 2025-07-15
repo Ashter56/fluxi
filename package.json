@@ -10,7 +10,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push"
     
-    // ===== NEW DEPLOYMENT SCRIPTS =====
+    
     "build:client": "cd client && npm install && vite build",
     "serve:client": "npx serve -s client/dist -p $PORT",
     "deploy:render": "npm run build:client && npm run serve:client"
