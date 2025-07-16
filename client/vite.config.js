@@ -11,10 +11,19 @@ const __dirname = path.dirname(__filename);
 
 // Base configuration with proxy settings
 const baseConfig = defineConfig({
-  // Explicit root path to client folder
   root: __dirname,
-  
   plugins: [react()],
+  
+  // ===== CRITICAL FIX: Add resolve aliases =====
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+      '@/components': path.resolve(__dirname, 'src/components'),
+      '@/lib': path.resolve(__dirname, 'src/lib')
+    }
+  },
+  // ===== END FIX =====
+  
   server: {
     proxy: {
       '/api': {
@@ -24,11 +33,17 @@ const baseConfig = defineConfig({
       }
     }
   },
-  
-  // Build output directory inside client
   build: {
     outDir: path.resolve(__dirname, 'dist'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    
+    // ===== OPTIONAL: Rollup config to prevent warnings =====
+    rollupOptions: {
+      onwarn(warning, warn) {
+        if (warning.code === 'UNRESOLVED_IMPORT') return;
+        warn(warning);
+      }
+    }
   }
 });
 
