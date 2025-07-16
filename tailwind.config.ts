@@ -5,13 +5,16 @@ export default {
   content: [
     "./client/index.html",
     "./client/src/**/*.{js,jsx,ts,tsx}",
-    "./client/src/index.css" // This is the ONLY change I made
+    "./client/src/index.css"
   ],
   theme: {
     extend: {
-      borderColor: {
+      // UPDATED BORDERCOLOR CONFIGURATION:
+      borderColor: ({ theme }) => ({
+        ...theme('colors'),
         border: "hsl(var(--border))"
-      },
+      }),
+      
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
