@@ -9,12 +9,6 @@ export default {
   ],
   theme: {
     extend: {
-      // UPDATED BORDERCOLOR CONFIGURATION:
-      borderColor: ({ theme }) => ({
-        ...theme('colors'),
-        border: "hsl(var(--border))"
-      }),
-      
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -51,7 +45,7 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
-        border: "hsl(var(--border))",
+        border: "hsl(var(--border))", // Keep as reference
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         chart: {
@@ -96,5 +90,16 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+    // Add custom plugin to define border-border
+    function ({ addUtilities, theme }: any) {
+      addUtilities({
+        '.border-border': {
+          'border-color': theme('colors.border'),
+        },
+      })
+    }
+  ],
 } satisfies Config;
