@@ -5,6 +5,7 @@ export default {
   content: [
     "./client/index.html",
     "./client/src/**/*.{js,jsx,ts,tsx}",
+    "./client/src/index.css" // STEP 1: ADDED THIS LINE
   ],
   theme: {
     extend: {
