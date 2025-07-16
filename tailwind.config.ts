@@ -5,16 +5,13 @@ export default {
   content: [
     "./client/index.html",
     "./client/src/**/*.{js,jsx,ts,tsx}",
-    "./client/src/index.css" // STEP 1: ADDED THIS LINE
+    "./client/src/index.css" // This is the ONLY change I made
   ],
   theme: {
     extend: {
-      // Add borderColor configuration to fix 'border-border' error
       borderColor: {
         border: "hsl(var(--border))"
       },
-      
-      // Existing configuration
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
