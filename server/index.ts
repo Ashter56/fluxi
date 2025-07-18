@@ -2,11 +2,16 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
-import fs from "fs"; // Added fs module
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// NEW: Add request logging middleware
+app.use((req, res, next) => {
+  log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -49,23 +54,9 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Add build info route
-  app.get('/build-info', (req, res) => {
-    const buildPath = path.join(process.cwd(), 'client', 'dist');
-    
-    try {
-      const files = fs.readdirSync(buildPath);
-      res.json({
-        exists: true,
-        files: files.filter(f => f !== 'assets'),
-        assetsCount: files.includes('assets') ? fs.readdirSync(path.join(buildPath, 'assets')).length : 0
-      });
-    } catch (error) {
-      res.json({
-        exists: false,
-        error: error.message
-      });
-    }
+  // NEW: Simple status endpoint
+  app.get("/status", (req, res) => {
+    res.send("Server is running");
   });
 
   // Development: Use Vite
@@ -78,6 +69,7 @@ app.use((req, res, next) => {
     app.use(express.static(clientBuildPath));
     
     app.get("*", (req, res) => {
+      log(`Serving index.html for path: ${req.path}`);
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
   }
@@ -88,6 +80,6 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`Server started on port ${port}`);
   });
 })();
