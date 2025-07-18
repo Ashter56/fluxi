@@ -1,3 +1,8 @@
+/* Add at the top of index.css */
+.replit-badge, 
+.replit-ui-theme-root {
+  display: none !important;
+}
 @layer utilities {
   .border-border {
     border-color: hsl(var(--border));
