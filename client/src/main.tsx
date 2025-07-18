@@ -1,5 +1,4 @@
-
-import React from 'react'; // Added React import
+import React from 'react';
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
@@ -8,16 +7,52 @@ import { queryClient } from "./lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 
-// 1. Add error boundary component
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
-  state = { hasError: false };
+// 1. Create a debug container that will always be visible
+const debugContainer = document.createElement('div');
+debugContainer.id = 'debug-container';
+debugContainer.style.cssText = `
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #ff0000;
+  color: white;
+  padding: 1rem;
+  font-family: monospace;
+  font-size: 1.2rem;
+  z-index: 9999;
+  display: none;
+`;
+document.body.appendChild(debugContainer);
+
+// 2. Get root element and force debug styles with !important
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  rootElement.style.setProperty('border', '5px solid limegreen', 'important');
+  rootElement.style.setProperty('padding', '1rem', 'important');
+  rootElement.style.setProperty('min-height', '100vh', 'important');
+  rootElement.style.setProperty('background', 'rgba(0,255,0,0.1)', 'important');
+  console.log('Root element found and styled');
+} else {
+  const debugMsg = '⚠️ Root element not found!';
+  debugContainer.textContent = debugMsg;
+  debugContainer.style.display = 'block';
+  console.error(debugMsg);
+}
+
+// 3. Enhanced error boundary
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  state = { hasError: false, error: null };
   
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
   
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("React ErrorBoundary caught:", error, errorInfo);
+  componentDidCatch(error: Error) {
+    const debugMsg = `ErrorBoundary: ${error.message}`;
+    debugContainer.textContent = debugMsg;
+    debugContainer.style.display = 'block';
+    console.error(debugMsg, error);
   }
   
   render() {
@@ -31,7 +66,8 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
           minHeight: '100vh'
         }}>
           <h1>Application Error</h1>
-          <p>Check browser console for details</p>
+          <p>{this.state.error?.toString()}</p>
+          <pre>{this.state.error?.stack}</pre>
         </div>
       );
     }
@@ -39,18 +75,15 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 }
 
-// 2. Get root element and add debug styling
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  rootElement.style.border = '5px solid limegreen';
-  rootElement.style.padding = '1rem';
-  rootElement.style.minHeight = '100vh';
-  console.log('Root element found and styled');
-} else {
-  console.error('Root element not found!');
-}
+// 4. Global error handler
+window.addEventListener('error', (event) => {
+  const debugMsg = `Global Error: ${event.message}`;
+  debugContainer.textContent = debugMsg;
+  debugContainer.style.display = 'block';
+  console.error(debugMsg, event.error);
+});
 
-// 3. Add try-catch block for mounting errors
+// 5. Try to mount the app
 try {
   if (!rootElement) throw new Error('Root element not found!');
   
@@ -71,16 +104,25 @@ try {
   
   console.log('React app mounted successfully');
 } catch (error) {
-  console.error('Mounting failed:', error);
+  const err = error as Error;
+  const debugMsg = `Mounting Failed: ${err.message}`;
+  debugContainer.textContent = debugMsg;
+  debugContainer.style.display = 'block';
+  console.error(debugMsg, error);
   
-  // Create fallback UI if mounting fails
+  // Create fallback UI
   const fallbackUI = document.createElement('div');
+  fallbackUI.style.cssText = `
+    padding: 2rem;
+    background: #ff0000;
+    color: #ffffff;
+    font-size: 1.5rem;
+    min-height: 100vh;
+  `;
   fallbackUI.innerHTML = `
-    <div style="padding: 2rem; background: #ff0000; color: #ffffff;">
-      <h1>Critical Application Error</h1>
-      <p>${(error as Error).message}</p>
-      <pre>${(error as Error).stack || 'No stack trace available'}</pre>
-    </div>
+    <h1>Critical Application Error</h1>
+    <p>${err.message}</p>
+    <pre>${err.stack || 'No stack trace available'}</pre>
   `;
   document.body.appendChild(fallbackUI);
 }
