@@ -1,7 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import path from "path"; // Added path module
+import path from "path";
+import fs from "fs"; // Added fs module
 
 const app = express();
 app.use(express.json());
@@ -48,23 +49,39 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Add build info route
+  app.get('/build-info', (req, res) => {
+    const buildPath = path.join(process.cwd(), 'client', 'dist');
+    
+    try {
+      const files = fs.readdirSync(buildPath);
+      res.json({
+        exists: true,
+        files: files.filter(f => f !== 'assets'),
+        assetsCount: files.includes('assets') ? fs.readdirSync(path.join(buildPath, 'assets')).length : 0
+      });
+    } catch (error) {
+      res.json({
+        exists: false,
+        error: error.message
+      });
+    }
+  });
+
   // Development: Use Vite
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } 
   // Production: Serve static files
   else {
-    // 1. Serve static files from the client build
     const clientBuildPath = path.join(process.cwd(), "client", "dist");
     app.use(express.static(clientBuildPath));
     
-    // 2. Handle client-side routing - return index.html for all requests
     app.get("*", (req, res) => {
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
   }
 
-  // ALWAYS serve the app on port 5000
   const port = 5000;
   server.listen({
     port,
