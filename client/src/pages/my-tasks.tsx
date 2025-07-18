@@ -5,7 +5,7 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { TaskCard } from "@/components/task-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-import { TaskStatus, TaskWithDetails, User } from "./shared/schema";
+import { TaskStatus, TaskWithDetails, User } from "../shared/schema"; // Fixed import path
 import { AddTaskModal } from "@/components/add-task-modal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
