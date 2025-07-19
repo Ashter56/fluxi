@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './auth-provider';
 import { queryClient } from '@/lib/queryClient';
-import { TaskWithDetails } from '@shared/schema';
+import { TaskWithDetails } from "../shared/schema";
 import { useToast } from './use-toast';
 
 // Define the same event types as on the server
