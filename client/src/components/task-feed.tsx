@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type TaskWithDetails, type TaskStatus } from "@shared/schema";
+import { type TaskWithDetails, type TaskStatus } from "../shared/schema";
 import { TaskCard } from "@/components/task-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWebSocket, WebSocketEvent } from "@/hooks/use-websocket";
