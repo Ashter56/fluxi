@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { Home, CheckSquare, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { User as UserType } from "@shared/schema";
+import { User as UserType } from "../shared/schema";
 import { useState } from "react";
 import { AddTaskModal } from "./add-task-modal";
 
