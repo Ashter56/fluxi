@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { type TaskStatus } from "@shared/schema";
+import { type TaskStatus } from "../shared/schema";
 
 interface StatusBadgeProps {
   status: TaskStatus;
