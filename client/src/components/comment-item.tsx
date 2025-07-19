@@ -1,4 +1,4 @@
-import { type CommentWithUser } from "@shared/schema";
+import { type CommentWithUser } from "../shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 
