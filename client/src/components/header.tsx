@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/auth-provider";
-import type { User } from "@shared/schema";
+import type { User } from "../shared/schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
