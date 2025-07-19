@@ -12,9 +12,8 @@ const __dirname = path.dirname(__filename);
 // Base configuration with proxy settings
 const baseConfig = defineConfig({
   root: __dirname,
-  plugins: [react()],
+  plugins: [react()], // Removed non-existent plugin
   
-  // ===== CRITICAL FIX: Add resolve aliases =====
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
@@ -22,7 +21,6 @@ const baseConfig = defineConfig({
       '@/lib': path.resolve(__dirname, 'src/lib')
     }
   },
-  // ===== END FIX =====
   
   server: {
     proxy: {
@@ -33,11 +31,11 @@ const baseConfig = defineConfig({
       }
     }
   },
+  
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
     
-    // ===== OPTIONAL: Rollup config to prevent warnings =====
     rollupOptions: {
       onwarn(warning, warn) {
         if (warning.code === 'UNRESOLVED_IMPORT') return;
