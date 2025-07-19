@@ -18,8 +18,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// 🔽🔽🔽 ADD THIS LINE (should be at line 17) 🔽🔽🔽
-import { trackDailyUser } from "../analytics";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
