@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { UserWithStats } from "@shared/schema";
+import { UserWithStats } from "../shared/schema";
 import { Header } from "@/components/header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
