@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { TaskWithDetails, TaskStatus } from "@shared/schema";
+import { TaskWithDetails, TaskStatus } from "../shared/schema";
 
 export function useTask(taskId?: number) {
   const { toast } = useToast();
