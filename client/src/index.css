@@ -96,7 +96,12 @@
   --radius: 0.5rem;
 }
 
-/* ===== ADDED FIX FOR GREEN BORDER ===== */
+/* ===== FIX FOR GREEN BORDER ===== */
+.border-secondary {
+  border-color: transparent !important;
+}
+
+/* Remove borders from root elements */
 body, 
 #root, 
 .app-container, 
@@ -104,13 +109,4 @@ body,
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-}
-
-.ring-*, 
-.border-green-*, 
-.ring-green-*, 
-.border-secondary {
-  --tw-ring-color: transparent !important;
-  border-color: transparent !important;
-  outline: none !important;
 }
