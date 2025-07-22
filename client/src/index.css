@@ -1,8 +1,14 @@
+/* TAILWIND DIRECTIVES MUST COME FIRST */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Add at the top of index.css */
 .replit-badge, 
 .replit-ui-theme-root {
   display: none !important;
 }
+
 @layer utilities {
   .border-border {
     border-color: hsl(var(--border));
@@ -14,10 +20,6 @@
     color: hsl(var(--foreground));
   }
 }
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 @layer base {
   * {
