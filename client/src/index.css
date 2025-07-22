@@ -22,7 +22,11 @@
 }
 
 @layer base {
-  * {
+  /* Only apply borders to form elements */
+  input,
+  textarea,
+  button,
+  select {
     @apply border-border;
   }
 
