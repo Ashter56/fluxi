@@ -95,3 +95,22 @@
   --ring: 255 74% 66%;
   --radius: 0.5rem;
 }
+
+/* ===== ADDED FIX FOR GREEN BORDER ===== */
+body, 
+#root, 
+.app-container, 
+.main-container {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.ring-*, 
+.border-green-*, 
+.ring-green-*, 
+.border-secondary {
+  --tw-ring-color: transparent !important;
+  border-color: transparent !important;
+  outline: none !important;
+}
