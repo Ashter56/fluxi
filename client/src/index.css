@@ -97,6 +97,7 @@
 }
 
 /* ===== FIX FOR GREEN BORDER ===== */
+/* Remove secondary borders */
 .border-secondary {
   border-color: transparent !important;
 }
@@ -109,4 +110,9 @@ body,
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* FORCE REMOVE BODY BORDER (overrides inline style) */
+body {
+  border: none !important;
 }
