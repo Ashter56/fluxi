@@ -3,12 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Fluxi</title> <!-- Added missing title -->
+    <title>Fluxi</title>
+    
+    <!-- Added script to remove green border -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // Remove any inline border style from body
+        document.body.style.border = 'none';
+        
+        // Additional protection: remove border style every second for 5 seconds
+        let attempts = 0;
+        const removeBorder = setInterval(() => {
+          document.body.style.border = 'none';
+          attempts++;
+          
+          if (attempts >= 5) clearInterval(removeBorder);
+        }, 1000);
+      });
+    </script>
+    
     <script src="/disable-hmr.js"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- REMOVED the Replit script -->
   </body>
 </html>
