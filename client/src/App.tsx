@@ -23,7 +23,7 @@ function App() {
   return (
     <AuthProvider>
       <WebSocketProvider>
-        {/* FIXED: Added border-0 and ring-0 to remove green border */}
+        {/* Added border-0 and ring-0 to remove any possible borders */}
         <div className="min-h-screen bg-background relative pb-20 border-0 ring-0">
           <Switch>
             <ProtectedRoute path="/" component={Home} />
