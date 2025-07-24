@@ -24,7 +24,7 @@ function App() {
     <AuthProvider>
       <WebSocketProvider>
         {/* Added border-0 and ring-0 to remove any possible borders */}
-        <div className="min-h-screen bg-background relative pb-20 border-0 ring-0">
+        <div className="min-h-screen bg-background relative pb-20 border-0 ring-0" style={{ border: 'none' }}>
           <Switch>
             <ProtectedRoute path="/" component={Home} />
             <ProtectedRoute path="/profile/:id" component={Profile} />
