@@ -32,8 +32,10 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const { user, registerMutation } = useAuth();
+  const { user } = useAuth();
   const [registered, setRegistered] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // If user is already logged in or just registered, redirect to homepage
   if (user || registered) {
@@ -52,14 +54,41 @@ export default function RegisterPage() {
   });
 
   const handleRegister = async (data: RegisterFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
       // Remove confirmPassword as it's not needed in the API call
       const { confirmPassword, ...registerData } = data;
-      await registerMutation.mutateAsync(registerData);
+      
+      // Direct API call with proper error handling
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(registerData)
+      });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Server returned unexpected response: ${text.substring(0, 100)}`);
+      }
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Registration failed');
+      }
+      
       setRegistered(true);
     } catch (error) {
       console.error("Registration error:", error);
-      // Error is handled in the mutation
+      setError(error instanceof Error ? error.message : 'Unknown registration error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -73,6 +102,12 @@ export default function RegisterPage() {
               Register to access all features of Fluxion
             </p>
           </div>
+
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+              <strong>Registration failed: </strong> {error}
+            </div>
+          )}
 
           <Form {...form}>
             <form className="space-y-4" action="#" method="POST" onSubmit={(e) => {
@@ -147,8 +182,12 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-                {registerMutation.isPending ? (
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
                 Register
