@@ -5,21 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Fluxi</title>
     
-    <!-- Added script to remove green border -->
+    <!-- Nuclear border removal script -->
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        // Remove any inline border style from body
-        document.body.style.border = 'none';
-        
-        // Additional protection: remove border style every second for 5 seconds
-        let attempts = 0;
-        const removeBorder = setInterval(() => {
+      // Immediate removal
+      if (document.body) document.body.style.border = 'none';
+      
+      // Remove on every possible event
+      const events = ['DOMContentLoaded', 'load', 'readystatechange', 'mousemove'];
+      events.forEach(event => {
+        document.addEventListener(event, () => {
           document.body.style.border = 'none';
-          attempts++;
-          
-          if (attempts >= 5) clearInterval(removeBorder);
-        }, 1000);
+        });
       });
+      
+      // Constant removal for 10 seconds
+      setTimeout(() => {
+        const interval = setInterval(() => {
+          document.body.style.border = 'none';
+        }, 50);
+        
+        setTimeout(() => clearInterval(interval), 10000);
+      }, 1000);
     </script>
     
     <script src="/disable-hmr.js"></script>
