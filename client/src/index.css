@@ -3,6 +3,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* IMMEDIATE BORDER REMOVAL - TOP PRIORITY */
+body, #root, .app-container {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  all: unset;
+}
+
 /* Add at the top of index.css */
 .replit-badge, 
 .replit-ui-theme-root {
@@ -96,26 +104,7 @@
   --radius: 0.5rem;
 }
 
-/* ===== FIX FOR GREEN BORDER ===== */
-/* Nuclear option - reset all styling on body */
-body {
-  all: unset !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background-color: hsl(var(--background)) !important;
-  color: hsl(var(--foreground)) !important;
-}
-
-/* Remove any potential borders on root elements */
-#root, .app-container, .main-container {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Remove focus rings globally */
-*:focus {
-  outline: none !important;
-  box-shadow: none !important;
+/* FINAL BORDER OVERRIDE */
+* {
+  border: 0 !important;
 }
