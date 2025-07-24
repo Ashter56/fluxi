@@ -7,25 +7,34 @@
     
     <!-- Nuclear border removal script -->
     <script>
-      // Immediate removal
-      if (document.body) document.body.style.border = 'none';
+      // Run immediately
+      try {
+        document.body.style.border = 'none';
+        document.body.style.outline = 'none';
+      } catch (e) {}
       
-      // Remove on every possible event
-      const events = ['DOMContentLoaded', 'load', 'readystatechange', 'mousemove'];
-      events.forEach(event => {
-        document.addEventListener(event, () => {
-          document.body.style.border = 'none';
+      // Create MutationObserver to watch for style changes
+      const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+          if (mutation.attributeName === 'style') {
+            if (document.body.style.border || document.body.style.outline) {
+              document.body.style.border = 'none';
+              document.body.style.outline = 'none';
+            }
+          }
         });
       });
       
-      // Constant removal for 10 seconds
-      setTimeout(() => {
-        const interval = setInterval(() => {
-          document.body.style.border = 'none';
-        }, 50);
-        
-        setTimeout(() => clearInterval(interval), 10000);
-      }, 1000);
+      // Start observing body for style changes
+      observer.observe(document.body, { attributes: true });
+      
+      // Remove border every 100ms for the first 10 seconds
+      const interval = setInterval(() => {
+        document.body.style.border = 'none';
+        document.body.style.outline = 'none';
+      }, 100);
+      
+      setTimeout(() => clearInterval(interval), 10000);
     </script>
     
     <script src="/disable-hmr.js"></script>
