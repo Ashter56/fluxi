@@ -5,36 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Fluxi</title>
     
-    <!-- Nuclear border removal script -->
+    <!-- ULTIMATE BORDER REMOVAL SCRIPT -->
     <script>
-      // Run immediately
-      try {
-        document.body.style.border = 'none';
-        document.body.style.outline = 'none';
-      } catch (e) {}
+      // Nuclear option: override CSSStyleDeclaration
+      const originalSetProperty = CSSStyleDeclaration.prototype.setProperty;
+      CSSStyleDeclaration.prototype.setProperty = function(prop, value) {
+        if (prop === 'border') return;
+        originalSetProperty.call(this, prop, value);
+      };
       
-      // Create MutationObserver to watch for style changes
-      const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-          if (mutation.attributeName === 'style') {
-            if (document.body.style.border || document.body.style.outline) {
-              document.body.style.border = 'none';
-              document.body.style.outline = 'none';
-            }
-          }
+      // Immediately remove border
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.style.border = 'none';
+        
+        // Create style element to override any borders
+        const style = document.createElement('style');
+        style.textContent = `body, #root { border: none !important; }`;
+        document.head.appendChild(style);
+        
+        // MutationObserver to catch any future changes
+        const observer = new MutationObserver(() => {
+          document.body.style.border = 'none';
+        });
+        
+        observer.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['style']
         });
       });
-      
-      // Start observing body for style changes
-      observer.observe(document.body, { attributes: true });
-      
-      // Remove border every 100ms for the first 10 seconds
-      const interval = setInterval(() => {
-        document.body.style.border = 'none';
-        document.body.style.outline = 'none';
-      }, 100);
-      
-      setTimeout(() => clearInterval(interval), 10000);
     </script>
     
     <script src="/disable-hmr.js"></script>
