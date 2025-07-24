@@ -97,22 +97,25 @@
 }
 
 /* ===== FIX FOR GREEN BORDER ===== */
-/* Remove secondary borders */
-.border-secondary {
-  border-color: transparent !important;
+/* Nuclear option - reset all styling on body */
+body {
+  all: unset !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
 }
 
-/* Remove borders from root elements */
-body, 
-#root, 
-.app-container, 
-.main-container {
+/* Remove any potential borders on root elements */
+#root, .app-container, .main-container {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
 }
 
-/* FORCE REMOVE BODY BORDER (overrides inline style) */
-body {
-  border: none !important;
+/* Remove focus rings globally */
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
