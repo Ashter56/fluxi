@@ -2,12 +2,17 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
+import { fileURLToPath } from "url"; // NEW IMPORT
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// NEW: Add request logging middleware
+// NEW: Get directory name for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Request logging middleware
 app.use((req, res, next) => {
   log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -54,7 +59,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // NEW: Simple status endpoint
+  // Simple status endpoint
   app.get("/status", (req, res) => {
     res.send("Server is running");
   });
@@ -65,16 +70,20 @@ app.use((req, res, next) => {
   } 
   // Production: Serve static files
   else {
-    const clientBuildPath = path.join(process.cwd(), "client", "dist");
+    // NEW: Calculate correct client build path for production
+    const clientBuildPath = path.join(__dirname, "../../client/dist");
+    
+    // Serve static files from client/dist
     app.use(express.static(clientBuildPath));
     
+    // NEW: Handle SPA routing - return index.html for all other requests
     app.get("*", (req, res) => {
       log(`Serving index.html for path: ${req.path}`);
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
   }
 
-  const port = 5000;
+  const port = process.env.PORT || 5000; // UPDATED: Use PORT from environment
   server.listen({
     port,
     host: "0.0.0.0",
