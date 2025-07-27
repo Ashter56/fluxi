@@ -1,12 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
 // Calculate __filename and __dirname ONCE at the top
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Simple logger function
+const log = console.log;
 
 const app = express();
 app.use(express.json());
@@ -64,20 +66,14 @@ app.use((req, res, next) => {
     res.send("Server is running");
   });
 
-  // Development: Use Vite
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } 
-  // Production: Serve static files
-  else {
-    const clientBuildPath = path.join(__dirname, "../../client/dist");
-    app.use(express.static(clientBuildPath));
-    
-    app.get("*", (req, res) => {
-      log(`Serving index.html for path: ${req.path}`);
-      res.sendFile(path.join(clientBuildPath, "index.html"));
-    });
-  }
+  // Always serve static files in production
+  const clientBuildPath = path.join(__dirname, "../../client/dist");
+  app.use(express.static(clientBuildPath));
+  
+  app.get("*", (req, res) => {
+    log(`Serving index.html for path: ${req.path}`);
+    res.sendFile(path.join(clientBuildPath, "index.html"));
+  });
 
   const port = process.env.PORT || 5000;
   server.listen({
