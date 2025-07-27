@@ -1,3 +1,14 @@
+import { resolve as resolvePath } from 'path';
+import { fileURLToPath } from 'url';
+import moduleAlias from 'module-alias';
+
+// Add path aliases for runtime resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolvePath(__filename, '../..');
+
+moduleAlias.addAliases({
+  '@shared': resolvePath(__dirname, 'shared'),
+});
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite";
