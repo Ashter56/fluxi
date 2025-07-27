@@ -2,15 +2,15 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from 'url';
-import commonjs from '@vitejs/plugin-commonjs'; // Add this
+import commonjs from '@vitejs/plugin-commonjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [
     react(),
-    commonjs(), // Add this plugin
-    // ... other plugins
+    commonjs(),
   ],
   resolve: {
     alias: {
@@ -19,14 +19,25 @@ export default defineConfig({
     },
   },
   define: {
-    'process.env': process.env, // Add process.env polyfill
+    'process.env': {},
   },
-  root: path.resolve(__dirname, "client"),
   build: {
-    outDir: path.resolve(__dirname, "dist", "public"),
+    outDir: path.resolve(__dirname, "dist"), // Correct output directory
     emptyOutDir: true,
     commonjsOptions: {
-      transformMixedEsModules: true, // Enable CJS/ESM interop
+      transformMixedEsModules: true,
     },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          vendor: ['lodash', 'axios'],
+        }
+      }
+    }
   },
+  server: {
+    port: 3000,
+    strictPort: true,
+  }
 });
