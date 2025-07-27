@@ -1,29 +1,24 @@
-import { resolve as resolvePath } from 'path';
-import { fileURLToPath } from 'url';
-import moduleAlias from 'module-alias';
-
-// Add path aliases for runtime resolution
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = resolvePath(__filename, '../..');
-
-moduleAlias.addAliases({
-  '@shared': resolvePath(__dirname, 'shared'),
-});
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic, log } from "./vite.js";
 import path from "path";
-import { fileURLToPath } from "url"; // NEW IMPORT
+import { fileURLToPath } from "url";
+import moduleAlias from "module-alias"; // Make sure this is installed
+
+// Calculate __filename and __dirname ONCE at the top
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Set up module aliases
+moduleAlias.addAliases({
+  '@shared': path.resolve(__dirname, '../../shared')
+});
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// NEW: Get directory name for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Request logging middleware
+// NEW: Add request logging middleware
 app.use((req, res, next) => {
   log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -70,7 +65,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Simple status endpoint
+  // NEW: Simple status endpoint
   app.get("/status", (req, res) => {
     res.send("Server is running");
   });
@@ -81,20 +76,16 @@ app.use((req, res, next) => {
   } 
   // Production: Serve static files
   else {
-    // NEW: Calculate correct client build path for production
     const clientBuildPath = path.join(__dirname, "../../client/dist");
-    
-    // Serve static files from client/dist
     app.use(express.static(clientBuildPath));
     
-    // NEW: Handle SPA routing - return index.html for all other requests
     app.get("*", (req, res) => {
       log(`Serving index.html for path: ${req.path}`);
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
   }
 
-  const port = process.env.PORT || 5000; // UPDATED: Use PORT from environment
+  const port = process.env.PORT || 5000;
   server.listen({
     port,
     host: "0.0.0.0",
