@@ -15,6 +15,7 @@
     "deploy:render": "npm run build:client && npm run serve:client"
   },
   "dependencies": {
+    "module-alias": "^2.2.3",
     "bcryptjs": "^2.4.3",
     "connect-pg-simple": "^10.0.0",
     "@hookform/resolvers": "^3.10.0",
