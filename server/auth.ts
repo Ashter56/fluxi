@@ -5,7 +5,7 @@ import session from "express-session";
 import bcrypt from 'bcryptjs';
 import pgSession from 'connect-pg-simple';
 import { storage } from "./storage";
-import { User as SelectUser } from "../../shared/schema";
+import { User as SelectUser } from  "../shared/schema";
 import { pool } from './db';
 
 const PgSession = pgSession(session);
