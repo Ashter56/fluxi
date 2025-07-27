@@ -9,7 +9,7 @@ import {
   insertLikeSchema,
   taskStatus,
   type TaskStatus
-} from  "../../shared/schema";
+} from  "../shared/schema";
 import { setupAuth } from "./auth";
 import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
 // Import analytics API router
