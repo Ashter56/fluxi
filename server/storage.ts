@@ -4,7 +4,7 @@ import {
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
   type TaskWithDetails, type CommentWithUser, type UserWithStats
-} from "../../shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count, desc, SQL, sql } from "drizzle-orm";
 import session from "express-session";
