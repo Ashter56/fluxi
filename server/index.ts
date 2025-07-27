@@ -3,11 +3,11 @@ import { registerRoutes } from "./routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Calculate __filename and __dirname ONCE at the top
+// Calculate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Simple logger function
+// Simple logger
 const log = console.log;
 
 const app = express();
@@ -66,12 +66,12 @@ app.use((req, res, next) => {
     res.send("Server is running");
   });
 
-  // Always serve static files in production
+  // Serve static files from client/dist
   const clientBuildPath = path.join(__dirname, "../../client/dist");
   app.use(express.static(clientBuildPath));
   
+  // Handle SPA routing
   app.get("*", (req, res) => {
-    log(`Serving index.html for path: ${req.path}`);
     res.sendFile(path.join(clientBuildPath, "index.html"));
   });
 
