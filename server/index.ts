@@ -3,22 +3,16 @@ import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import moduleAlias from "module-alias"; // Make sure this is installed
 
 // Calculate __filename and __dirname ONCE at the top
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Set up module aliases
-moduleAlias.addAliases({
-  '@shared': path.resolve(__dirname, '../../shared')
-});
-
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// NEW: Add request logging middleware
+// Request logging middleware
 app.use((req, res, next) => {
   log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -65,7 +59,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // NEW: Simple status endpoint
+  // Simple status endpoint
   app.get("/status", (req, res) => {
     res.send("Server is running");
   });
