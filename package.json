@@ -6,13 +6,12 @@
   "scripts": {
     "build:shared": "bun build shared/schema.ts --outdir server/shared --format esm",
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --plugin=../server/paths.plugin.js",
-    "start": "NODE_ENV=production node dist/index.js",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "build:client": "cd client && rm -rf .vite dist && npm install && vite build",
-    "serve:client": "npx serve -s client/dist -p $PORT",
-    "deploy:render": "npm run build:client && npm run serve:client"
+    "build:client": "cd client && rm -rf .vite dist && bun install && vite build",
+    "serve:client": "npx serve -s client/dist -p $PORT"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
