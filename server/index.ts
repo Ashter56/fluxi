@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
+  const requestPath = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -33,8 +33,8 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+    if (requestPath.startsWith("/api")) {
+      let logLine = `${req.method} ${requestPath} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -58,11 +58,12 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    log(`[ERROR] ${status} - ${message}`);
+    console.error(err);
   });
 
   // Simple status endpoint
-  app.get("/status", (req, res) => {
+  app.get("/status", (_, res) => {
     res.send("Server is running");
   });
 
@@ -76,11 +77,8 @@ app.use((req, res, next) => {
   });
 
   const port = process.env.PORT || 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`Server started on port ${port}`);
+    log(`Environment: ${process.env.NODE_ENV || "development"}`);
   });
 })();
