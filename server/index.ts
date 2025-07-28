@@ -1,3 +1,4 @@
+const log = console.log;
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import path from "path";
