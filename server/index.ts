@@ -1,4 +1,3 @@
-const log = console.log;
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import path from "path";
@@ -8,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Simple logger
+// SIMPLE LOGGER - ONLY DECLARE ONCE
 const log = console.log;
 
 const app = express();
@@ -23,7 +22,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const start = Date.now();
-  const requestPath = req.path;
+  const requestPath = req.path; // Renamed to avoid conflict
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -53,7 +52,6 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-   setupWebSocketServer(server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
