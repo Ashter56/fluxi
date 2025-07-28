@@ -6,7 +6,7 @@
   "scripts": {
     "build:shared": "bun build shared/schema.ts --outdir server/shared --format esm",
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "bun run build:shared && bun run build:client",
+    "build": "bun run build:shared",
     "start": "bun server/index.ts",
     "build:client": "vite build",
     "check": "tsc",
