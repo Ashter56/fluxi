@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { log } from './vite';
+const log = console.log;
 
 // Define event types for the WebSocket messages
 export enum WebSocketEvent {
