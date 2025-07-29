@@ -160,19 +160,36 @@ export function setupAuth(app: Express) {
     });
   });
   
-  // FIXED: Corrected wildcard route with named parameter
-  app.use("/api/:any*", (req, res, next) => {
-    // Improved public paths check
-    const publicPaths = ["/api/login", "/api/register", "/api/user"];
-    
-    if (
-      publicPaths.includes(req.path) || 
-      req.method === "GET" ||
-      req.method === "OPTIONS" // Allow CORS preflight
-    ) {
+  // FIXED: Authentication middleware without route pattern issues
+  app.use((req, res, next) => {
+    // Skip authentication for non-API routes
+    if (!req.path.startsWith("/api/")) {
       return next();
     }
     
+    // Handle CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+    
+    // Define public API paths
+    const publicPaths = [
+      "/api/login",
+      "/api/register",
+      "/api/user"
+    ];
+    
+    // Allow access to public paths
+    if (publicPaths.includes(req.path)) {
+      return next();
+    }
+    
+    // Allow GET requests to all API endpoints
+    if (req.method === "GET") {
+      return next();
+    }
+    
+    // Require authentication for other API requests
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
