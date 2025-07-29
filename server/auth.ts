@@ -160,12 +160,15 @@ export function setupAuth(app: Express) {
     });
   });
   
-  app.use("/api/*", (req, res, next) => {
+  // FIXED: Corrected wildcard route with named parameter
+  app.use("/api/:any*", (req, res, next) => {
+    // Improved public paths check
+    const publicPaths = ["/api/login", "/api/register", "/api/user"];
+    
     if (
-      req.path === "/api/login" || 
-      req.path === "/api/register" || 
-      req.path === "/api/user" ||
-      req.method === "GET"
+      publicPaths.includes(req.path) || 
+      req.method === "GET" ||
+      req.method === "OPTIONS" // Allow CORS preflight
     ) {
       return next();
     }
