@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import { pathToRegexp } from "path-to-regexp"; // Ensure this is imported
 
 // Calculate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -10,45 +9,6 @@ const __dirname = path.dirname(__filename);
 
 const log = console.log;
 const app = express();
-
-// 1. Add route validation FIRST
-app.use((req, res, next) => {
-  try {
-    // Validate all routes at startup
-    app._router.stack.forEach((layer: any) => {
-      if (layer.route && layer.route.path) {
-        // Skip known valid patterns
-        if (["/", "/status", "/*"].includes(layer.route.path)) return;
-        
-        // Validate the path
-        pathToRegexp(layer.route.path);
-        log(`✓ Valid route: ${layer.route.path}`);
-      }
-    });
-    log("✅ All route patterns validated successfully");
-    next();
-  } catch (error: any) {
-    console.error("🚫 Invalid route pattern detected");
-    console.error("💥 Error:", error.message);
-    
-    const match = error.message.match(/at \d+: (.*)$/);
-    if (match) {
-      console.error("🔧 Problematic route:", match[1]);
-    } else {
-      console.error("🔧 Check all routes with parameters");
-    }
-    
-    // Attempt to identify the problematic route
-    const invalidRoutes = app._router.stack
-      .filter((layer: any) => layer.route?.path)
-      .map((layer: any) => layer.route.path)
-      .filter((path: string) => path.includes(':'));
-    
-    console.error("🔍 Routes with parameters:", invalidRoutes);
-    
-    process.exit(1);
-  }
-});
 
 // Basic middleware setup
 app.use(express.json());
