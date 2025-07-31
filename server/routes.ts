@@ -20,18 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
   // Users endpoints
-  app.get("/api/users/current", async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    const user = req.user;
-    // Remove password before sending
-    const { password, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
-  });
-  
-  app.get("/api/users/:id", async (req: Request, res: Response) => {
+  app.get("/api/users/{id}", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
@@ -47,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(userWithoutPassword);
   });
   
-  app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
+  app.get("/api/users/{id}/profile", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
@@ -99,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ count });
   });
   
-  app.get("/api/tasks/:id", async (req: Request, res: Response) => {
+  app.get("/api/tasks/{id}", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -154,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/tasks/:id", async (req: Request, res: Response) => {
+  app.patch("/api/tasks/{id}", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -212,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/tasks/:id", async (req: Request, res: Response) => {
+  app.delete("/api/tasks/{id}", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -242,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Comments endpoints
-  app.get("/api/tasks/:id/comments", async (req: Request, res: Response) => {
+  app.get("/api/tasks/{id}/comments", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -252,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(comments);
   });
   
-  app.post("/api/tasks/:id/comments", async (req: Request, res: Response) => {
+  app.post("/api/tasks/{id}/comments", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -291,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Likes endpoints
-  app.post("/api/tasks/:id/like", async (req: Request, res: Response) => {
+  app.post("/api/tasks/{id}/like", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
