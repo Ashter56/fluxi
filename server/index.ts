@@ -74,7 +74,7 @@ app.use((req, res, next) => {
     const clientBuildPath = path.join(__dirname, "../../client/dist");
     app.use(express.static(clientBuildPath));
     
-    // Handle SPA routing with VALID pattern
+    // Handle SPA routing
     app.get("/*", (req, res) => {
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
