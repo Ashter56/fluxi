@@ -2,15 +2,55 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { pathToRegexp } from "path-to-regexp"; // Ensure this is imported
 
 // Calculate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// SIMPLE LOGGER - ONLY DECLARE ONCE
 const log = console.log;
-
 const app = express();
+
+// 1. Add route validation FIRST
+app.use((req, res, next) => {
+  try {
+    // Validate all routes at startup
+    app._router.stack.forEach((layer: any) => {
+      if (layer.route && layer.route.path) {
+        // Skip known valid patterns
+        if (["/", "/status", "/*"].includes(layer.route.path)) return;
+        
+        // Validate the path
+        pathToRegexp(layer.route.path);
+        log(`✓ Valid route: ${layer.route.path}`);
+      }
+    });
+    log("✅ All route patterns validated successfully");
+    next();
+  } catch (error: any) {
+    console.error("🚫 Invalid route pattern detected");
+    console.error("💥 Error:", error.message);
+    
+    const match = error.message.match(/at \d+: (.*)$/);
+    if (match) {
+      console.error("🔧 Problematic route:", match[1]);
+    } else {
+      console.error("🔧 Check all routes with parameters");
+    }
+    
+    // Attempt to identify the problematic route
+    const invalidRoutes = app._router.stack
+      .filter((layer: any) => layer.route?.path)
+      .map((layer: any) => layer.route.path)
+      .filter((path: string) => path.includes(':'));
+    
+    console.error("🔍 Routes with parameters:", invalidRoutes);
+    
+    process.exit(1);
+  }
+});
+
+// Basic middleware setup
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -20,10 +60,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Performance logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const requestPath = req.path; // Renamed to avoid conflict
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  const requestPath = req.path;
+  let capturedJsonResponse: any = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -51,34 +92,40 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    log(`[ERROR] ${status} - ${message}`);
-    console.error(err);
-  });
+      res.status(status).json({ message });
+      log(`[ERROR] ${status} - ${message}`);
+      console.error(err);
+    });
 
-  // Simple status endpoint
-  app.get("/status", (_, res) => {
-    res.send("Server is running");
-  });
+    // Simple status endpoint
+    app.get("/status", (_, res) => {
+      res.send("Server is running");
+    });
 
-  // Serve static files from client/dist
-  const clientBuildPath = path.join(__dirname, "../../client/dist");
-  app.use(express.static(clientBuildPath));
-  
-  // Handle SPA routing
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(clientBuildPath, "index.html"));
-  });
+    // Serve static files from client/dist
+    const clientBuildPath = path.join(__dirname, "../../client/dist");
+    app.use(express.static(clientBuildPath));
+    
+    // Handle SPA routing with VALID pattern
+    app.get("/*", (req, res) => {
+      res.sendFile(path.join(clientBuildPath, "index.html"));
+    });
 
-  const port = process.env.PORT || 5000;
-  server.listen(port, "0.0.0.0", () => {
-    log(`Server started on port ${port}`);
-    log(`Environment: ${process.env.NODE_ENV || "development"}`);
-  });
+    const port = process.env.PORT || 5000;
+    server.listen(port, "0.0.0.0", () => {
+      log(`Server started on port ${port}`);
+      log(`Environment: ${process.env.NODE_ENV || "development"}`);
+    });
+  } catch (error) {
+    console.error("🚨 Critical error during server setup:", error);
+    process.exit(1);
+  }
 })();
