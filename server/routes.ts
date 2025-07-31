@@ -20,7 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
   // Users endpoints
-  app.get("/api/users/{id}", async (req: Request, res: Response) => {
+  app.get("/api/users/:id", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(userWithoutPassword);
   });
   
-  app.get("/api/users/{id}/profile", async (req: Request, res: Response) => {
+  app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ count });
   });
   
-  app.get("/api/tasks/{id}", async (req: Request, res: Response) => {
+  app.get("/api/tasks/:id", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -143,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/tasks/{id}", async (req: Request, res: Response) => {
+  app.patch("/api/tasks/:id", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -176,16 +176,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cast status as TaskStatus if present
       if (taskUpdate.status) {
         taskUpdate.status = taskUpdate.status as TaskStatus;
-        
-        // Update the timestamp by adding a SQL query parameter
-        // We handle this on the database side in the updateTask method
       }
       
       const updatedTask = await storage.updateTask(taskId, taskUpdate);
       
       // If status was updated, broadcast the status change
       if (taskUpdate.status) {
-        // Get full task with user details for broadcasting
         const fullTask = await storage.getTask(taskId);
         if (fullTask) {
           broadcastMessage(WebSocketEvent.TASK_STATUS_UPDATE, fullTask);
@@ -201,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/tasks/{id}", async (req: Request, res: Response) => {
+  app.delete("/api/tasks/:id", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -216,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    // Check task ownership - allow Ashter Abbas (admin) to delete any task
+    // Check task ownership
     const isAdmin = req.user.username === "ashterabbas";
     if (task.userId !== req.user.id && !isAdmin) {
       return res.status(403).json({ message: "You cannot delete this task" });
@@ -231,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Comments endpoints
-  app.get("/api/tasks/{id}/comments", async (req: Request, res: Response) => {
+  app.get("/api/tasks/:id/comments", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -241,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(comments);
   });
   
-  app.post("/api/tasks/{id}/comments", async (req: Request, res: Response) => {
+  app.post("/api/tasks/:id/comments", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -280,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Likes endpoints
-  app.post("/api/tasks/{id}/like", async (req: Request, res: Response) => {
+  app.post("/api/tasks/:id/like", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -304,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const updatedTask = await storage.getTask(taskId);
         
-        // Broadcast like update (like count decreased)
+        // Broadcast like update
         if (updatedTask) {
           broadcastMessage(WebSocketEvent.LIKE, {
             ...updatedTask,
@@ -326,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedTask = await storage.getTask(taskId);
       
-      // Broadcast like update (like count increased)
+      // Broadcast like update
       if (updatedTask) {
         broadcastMessage(WebSocketEvent.LIKE, {
           ...updatedTask,
@@ -352,3 +348,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   return httpServer;
 }
+        
+  
