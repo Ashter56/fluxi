@@ -20,13 +20,10 @@ export interface WebSocketMessage {
 let clients = new Map<WebSocket, { userId?: number }>();
 
 export function setupWebSocketServer(server: Server) {
-  log('Setting up WebSocket server at /ws path', 'websocket');
+  log('Setting up WebSocket server', 'websocket'); // Removed path reference
   
-  // Create a WebSocket server on the same HTTP server but at /ws path
-  const wss = new WebSocketServer({ 
-    server,
-    path: '/ws'
-  });
+  // Create WebSocket server without path parameter
+  const wss = new WebSocketServer({ server }); // FIXED: Removed path option
 
   wss.on('connection', (ws: WebSocket) => {
     log('WebSocket client connected', 'websocket');
