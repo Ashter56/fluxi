@@ -65,8 +65,9 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    const server = await registerRoutes(app);
-
+    // FIRST: Register all regular routes EXCEPT the wildcard
+    const server = await registerRoutes(app, false); // Pass false to skip wildcard
+    
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -84,8 +85,8 @@ app.use((req, res, next) => {
 
     // Serve static files with proper MIME types and cache settings
     app.use(express.static(clientBuildPath, {
-      maxAge: '1y', // Cache for 1 year
-      etag: true,   // Enable ETag validation
+      maxAge: '1y',
+      etag: true,
       setHeaders: (res, filePath) => {
         if (filePath.endsWith(".js")) {
           res.setHeader("Content-Type", "application/javascript");
@@ -93,23 +94,21 @@ app.use((req, res, next) => {
         if (filePath.endsWith(".css")) {
           res.setHeader("Content-Type", "text/css");
         }
-        // Add cache control for all static assets
         if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
           res.setHeader('Cache-Control', 'public, max-age=31536000');
         }
       }
     }));
     
-    // Handle SPA routing - FIXED WILDCARD ROUTE HANDLING
-    app.get('*', (req, res, next) => {
+    // Handle SPA routing - PROPERLY FORMATED WILDCARD
+    app.get('*', (req, res) => {
       // Skip API routes and static files
       if (req.path.startsWith('/api') || 
           req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-        return next();
+        return res.status(404).send('Not found');
       }
       
       const indexPath = path.join(clientBuildPath, 'index.html');
-      console.log(`Serving index.html for: ${req.path}`);
       
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
