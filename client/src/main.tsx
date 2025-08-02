@@ -6,9 +6,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
+import { BrowserRouter } from 'react-router-dom'; // Add this
 
 // Wait for DOM to be fully ready
 document.addEventListener('DOMContentLoaded', () => {
+  // [Keep all your existing debug code unchanged]
   // Remove Replit banner if it exists
   const replitBanner = document.querySelector('.replit-ui-theme-root');
   if (replitBanner) {
@@ -117,7 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
               <Toaster />
-              <App />
+              {/* Add BrowserRouter here wrapping App */}
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
             </TooltipProvider>
           </QueryClientProvider>
         </ErrorBoundary>
