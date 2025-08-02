@@ -12,10 +12,11 @@ import {
 } from  "../shared/schema";
 import { setupAuth } from "./auth";
 import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
+
 // Import analytics API router
 const analyticsRouter = require('../analytics-api');
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, includeWildcard: boolean = true): Promise<Server> {
   // ======================================================
   // START OF SAFETY CHECKS - VALIDATE ALL ROUTE PATTERNS
   // ======================================================
