@@ -4,20 +4,20 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 
-// Calculate paths - FIXED FOR DEPLOYMENT
+// Calculate paths - FIXED PATH RESOLUTION
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Use process.cwd() to get Render's working directory
-const clientBuildPath = path.join(process.cwd(), "client");
+const basePath = process.cwd();
+const clientBuildPath = path.join(basePath, "client");
 
 // Verify client build directory exists
 console.log(`Verifying client build at: ${clientBuildPath}`);
 if (!fs.existsSync(clientBuildPath)) {
   console.error("❌ Client build directory not found!");
-  // Add diagnostic logging
-  console.log("Current working directory:", process.cwd());
-  console.log("Directory contents:", fs.readdirSync(process.cwd()));
+  console.log("Current working directory:", basePath);
+  console.log("Directory contents:", fs.readdirSync(basePath));
 } else {
   console.log("✅ Client build directory verified");
   console.log("Files in directory:", fs.readdirSync(clientBuildPath));
@@ -69,8 +69,11 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // SAFETY WRAPPER FOR ROUTE REGISTRATION
+    console.log("Starting route registration...");
     const server = await registerRoutes(app);
-
+    console.log("Route registration completed successfully");
+    
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -90,12 +93,11 @@ app.use((req, res, next) => {
     console.log(`Serving static files from: ${clientBuildPath}`);
     app.use(express.static(clientBuildPath));
     
-    // Handle SPA routing - FIXED TO USE ABSOLUTE PATH
-    app.get("*", (req, res) => {
+    // Handle SPA routing - SAFE IMPLEMENTATION
+    app.get(/^(?!\/api).*/, (req, res) => {
       const indexPath = path.join(clientBuildPath, "index.html");
-      console.log(`Serving index.html for: ${req.path} at ${indexPath}`);
+      console.log(`Serving index.html for: ${req.path}`);
       
-      // Verify file exists before sending
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
@@ -114,6 +116,17 @@ app.use((req, res, next) => {
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       console.error("Stack trace:", error.stack);
+      
+      // Add specific diagnostics for route errors
+      if (error.message.includes("Missing parameter name")) {
+        console.error("\n🔍 ROUTE DIAGNOSTICS:");
+        console.error("This error is typically caused by an invalid route pattern");
+        console.error("Please check all routes in your application for:");
+        console.error("1. Missing parameter names after colons");
+        console.error("2. Empty route patterns");
+        console.error("3. Special characters in route patterns");
+        console.error("4. Middleware with invalid path parameters");
+      }
     }
     process.exit(1);
   }
