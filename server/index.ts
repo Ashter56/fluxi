@@ -2,10 +2,21 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
-// Calculate __filename and __dirname
+// Calculate paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const clientBuildPath = path.join(__dirname, "../../client/dist");
+
+// Verify client build directory exists
+console.log(`Verifying client build at: ${clientBuildPath}`);
+if (!fs.existsSync(clientBuildPath)) {
+  console.error("❌ Client build directory not found!");
+} else {
+  console.log("✅ Client build directory verified");
+  console.log("Files in directory:", fs.readdirSync(clientBuildPath));
+}
 
 const log = console.log;
 const app = express();
@@ -53,29 +64,7 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    console.log("🔧 Starting route registration debugging...");
-    
-    const methodsToWrap = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'all', 'use'];
-    methodsToWrap.forEach(method => {
-      const original = app[method as keyof express.Express];
-      if (original) {
-        (app as any)[method] = function (path: any, ...handlers: any[]) {
-          if (typeof path === 'string') {
-            console.log(`🔹 Registering ${method.toUpperCase()} route: ${path}`);
-            if (path.includes(':') && !path.includes(':/') && !/:[\w-]+/.test(path)) {
-              console.error(`🚨 POTENTIAL INVALID ROUTE PATTERN: ${path}`);
-            }
-          } else {
-            console.warn(`⚠️ Non-string route path:`, path);
-          }
-          return (original as Function).call(this, path, ...handlers);
-        };
-      }
-    });
-
-    console.log("🔧 Calling registerRoutes...");
     const server = await registerRoutes(app);
-    console.log("✅ registerRoutes completed successfully");
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -93,11 +82,12 @@ app.use((req, res, next) => {
     });
 
     // Serve static files from client/dist
-    const clientBuildPath = path.join(__dirname, "../../client/dist");
+    console.log(`Serving static files from: ${clientBuildPath}`);
     app.use(express.static(clientBuildPath));
     
-    // FIXED: Handle SPA routing with proper regex pattern
-    app.get(/^(?!\/api\/).*/, (req, res) => {
+    // Handle SPA routing - FIXED REGEX
+    app.get(/.*/, (req, res) => {
+      console.log(`Serving index.html for: ${req.path}`);
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
 
@@ -111,13 +101,6 @@ app.use((req, res, next) => {
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       console.error("Stack trace:", error.stack);
-      
-      if (error.message.includes("Missing parameter name")) {
-        console.error("\n🔍 DIAGNOSTICS:");
-        console.error("Final fix: Use regex pattern for SPA route");
-        console.error("Instead of: app.get('*', ...)");
-        console.error("Use: app.get(/^(?!\\/api\\/).*/, ...)");
-      }
     }
     process.exit(1);
   }
