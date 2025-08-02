@@ -53,23 +53,18 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // START OF DEBUGGING ENHANCEMENTS
+    // Debugging route registrations
     console.log("🔧 Starting route registration debugging...");
     
-    // Wrap Express methods to log route registrations
     const methodsToWrap = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'all', 'use'];
     methodsToWrap.forEach(method => {
       const original = app[method as keyof express.Express];
       if (original) {
         (app as any)[method] = function (path: any, ...handlers: any[]) {
-          // Validate route pattern format
           if (typeof path === 'string') {
             console.log(`🔹 Registering ${method.toUpperCase()} route: ${path}`);
-            
-            // Check for invalid parameter patterns
             if (path.includes(':') && !path.includes(':/') && !/:[\w-]+/.test(path)) {
               console.error(`🚨 POTENTIAL INVALID ROUTE PATTERN: ${path}`);
-              console.error(`   Problem: Colon without parameter name detected`);
             }
           } else {
             console.warn(`⚠️ Non-string route path:`, path);
@@ -79,11 +74,9 @@ app.use((req, res, next) => {
       }
     });
 
-    // Register routes with debugging
     console.log("🔧 Calling registerRoutes...");
     const server = await registerRoutes(app);
     console.log("✅ registerRoutes completed successfully");
-    // END OF DEBUGGING ENHANCEMENTS
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -100,12 +93,12 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files from client/dist
+    // Serve static files from client/dist - FIXED
     const clientBuildPath = path.join(__dirname, "../../client/dist");
-    app.use(express.static(clientBuildPath));
+    app.use("/static", express.static(clientBuildPath)); // Added path prefix
     
-    // Handle SPA routing
-    app.get("/*", (req, res) => {
+    // Handle SPA routing - FIXED
+    app.get("*", (req, res) => { // Changed from "/*" to "*"
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
 
@@ -120,18 +113,14 @@ app.use((req, res, next) => {
       console.error("Error message:", error.message);
       console.error("Stack trace:", error.stack);
       
-      // Enhanced error diagnostics
       if (error.message.includes("Missing parameter name")) {
         console.error("\n🔍 DIAGNOSTICS:");
-        console.error("This error typically indicates an invalid route pattern");
-        console.error("Possible causes:");
-        console.error("1. Route with colon but no parameter name (e.g., '/api/users/:')");
-        console.error("2. Route with space after colon (e.g., '/api/users/: id')");
-        console.error("3. Route using curly braces instead of colons (e.g., '/api/users/{id}')");
-        console.error("4. WebSocket server using path parameter incorrectly");
+        console.error("This error indicates an invalid route pattern");
+        console.error("Check these common causes:");
+        console.error("1. Static file middleware without path prefix");
+        console.error("2. Wildcard routes using '/*' instead of '*'");
+        console.error("3. Middleware functions incorrectly passed as routes");
       }
-    } else {
-      console.error("Unknown error type:", error);
     }
     process.exit(1);
   }
