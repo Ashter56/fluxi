@@ -53,7 +53,6 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Debugging route registrations
     console.log("🔧 Starting route registration debugging...");
     
     const methodsToWrap = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'all', 'use'];
@@ -93,12 +92,12 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files from client/dist - FIXED
+    // Serve static files from client/dist
     const clientBuildPath = path.join(__dirname, "../../client/dist");
-    app.use("/static", express.static(clientBuildPath)); // Added path prefix
+    app.use(express.static(clientBuildPath));
     
-    // Handle SPA routing - FIXED
-    app.get("*", (req, res) => { // Changed from "/*" to "*"
+    // FIXED: Handle SPA routing with proper regex pattern
+    app.get(/^(?!\/api\/).*/, (req, res) => {
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
 
@@ -115,11 +114,9 @@ app.use((req, res, next) => {
       
       if (error.message.includes("Missing parameter name")) {
         console.error("\n🔍 DIAGNOSTICS:");
-        console.error("This error indicates an invalid route pattern");
-        console.error("Check these common causes:");
-        console.error("1. Static file middleware without path prefix");
-        console.error("2. Wildcard routes using '/*' instead of '*'");
-        console.error("3. Middleware functions incorrectly passed as routes");
+        console.error("Final fix: Use regex pattern for SPA route");
+        console.error("Instead of: app.get('*', ...)");
+        console.error("Use: app.get(/^(?!\\/api\\/).*/, ...)");
       }
     }
     process.exit(1);
