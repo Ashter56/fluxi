@@ -9,10 +9,13 @@ import localConfig from './vite.config.local.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Base configuration with proxy settings
+// Base configuration with production-optimized settings
 const baseConfig = defineConfig({
   root: __dirname,
-  plugins: [react()], // Removed non-existent plugin
+  plugins: [react()],
+  
+  // Key fix: Set base path correctly for production
+  base: '/',
   
   resolve: {
     alias: {
@@ -22,7 +25,8 @@ const baseConfig = defineConfig({
     }
   },
   
-  server: {
+  // Server configuration only for development
+  server: process.env.NODE_ENV === 'production' ? undefined : {
     proxy: {
       '/api': {
         target: 'https://fluxi-epb6.onrender.com',
@@ -35,8 +39,16 @@ const baseConfig = defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
+    assetsDir: 'assets',
+    sourcemap: true,
     
+    // Key fix: Ensure proper asset naming
     rollupOptions: {
+      output: {
+        assetFileNames: 'assets/[name].[hash].[ext]',
+        chunkFileNames: 'assets/[name].[hash].js',
+        entryFileNames: 'assets/[name].[hash].js'
+      },
       onwarn(warning, warn) {
         if (warning.code === 'UNRESOLVED_IMPORT') return;
         warn(warning);
