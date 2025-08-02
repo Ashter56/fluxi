@@ -82,14 +82,20 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files with proper MIME types
+    // Serve static files with proper MIME types AND CACHE SETTINGS // UPDATED SECTION
     app.use(express.static(clientBuildPath, {
+      maxAge: '1y', // Cache for 1 year
+      etag: true,   // Enable ETag validation
       setHeaders: (res, filePath) => {
         if (filePath.endsWith(".js")) {
           res.setHeader("Content-Type", "application/javascript");
         }
         if (filePath.endsWith(".css")) {
           res.setHeader("Content-Type", "text/css");
+        }
+        // Add cache control for all static assets
+        if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
         }
       }
     }));
