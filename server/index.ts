@@ -53,7 +53,37 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // START OF DEBUGGING ENHANCEMENTS
+    console.log("🔧 Starting route registration debugging...");
+    
+    // Wrap Express methods to log route registrations
+    const methodsToWrap = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'all', 'use'];
+    methodsToWrap.forEach(method => {
+      const original = app[method as keyof express.Express];
+      if (original) {
+        (app as any)[method] = function (path: any, ...handlers: any[]) {
+          // Validate route pattern format
+          if (typeof path === 'string') {
+            console.log(`🔹 Registering ${method.toUpperCase()} route: ${path}`);
+            
+            // Check for invalid parameter patterns
+            if (path.includes(':') && !path.includes(':/') && !/:[\w-]+/.test(path)) {
+              console.error(`🚨 POTENTIAL INVALID ROUTE PATTERN: ${path}`);
+              console.error(`   Problem: Colon without parameter name detected`);
+            }
+          } else {
+            console.warn(`⚠️ Non-string route path:`, path);
+          }
+          return (original as Function).call(this, path, ...handlers);
+        };
+      }
+    });
+
+    // Register routes with debugging
+    console.log("🔧 Calling registerRoutes...");
     const server = await registerRoutes(app);
+    console.log("✅ registerRoutes completed successfully");
+    // END OF DEBUGGING ENHANCEMENTS
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -85,13 +115,23 @@ app.use((req, res, next) => {
       log(`Environment: ${process.env.NODE_ENV || "development"}`);
     });
   } catch (error) {
-    console.error("🚨 Critical error during server setup:", error);
+    console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
-      console.error("Full error details:", {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+      console.error("Error message:", error.message);
+      console.error("Stack trace:", error.stack);
+      
+      // Enhanced error diagnostics
+      if (error.message.includes("Missing parameter name")) {
+        console.error("\n🔍 DIAGNOSTICS:");
+        console.error("This error typically indicates an invalid route pattern");
+        console.error("Possible causes:");
+        console.error("1. Route with colon but no parameter name (e.g., '/api/users/:')");
+        console.error("2. Route with space after colon (e.g., '/api/users/: id')");
+        console.error("3. Route using curly braces instead of colons (e.g., '/api/users/{id}')");
+        console.error("4. WebSocket server using path parameter incorrectly");
+      }
+    } else {
+      console.error("Unknown error type:", error);
     }
     process.exit(1);
   }
