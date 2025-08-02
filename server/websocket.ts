@@ -1,87 +1,38 @@
-import { WebSocketServer, WebSocket } from 'ws';
-import { Server } from 'http';
-const log = console.log;
+import { WebSocketServer, type WebSocket } from "ws";
+import type { Server } from "http";
+import { storage } from "./storage";
 
 export enum WebSocketEvent {
-  LIKE = 'like',
-  NEW_TASK = 'new_task',
-  TASK_STATUS_UPDATE = 'task_status_update',
-  PING = 'ping'
+  NEW_TASK = "NEW_TASK",
+  TASK_STATUS_UPDATE = "TASK_STATUS_UPDATE",
+  LIKE = "LIKE"
 }
 
-export interface WebSocketMessage {
-  type: WebSocketEvent;
-  data: any;
-}
-
-let clients = new Map<WebSocket, { userId?: number }>();
+let wss: WebSocketServer;
 
 export function setupWebSocketServer(server: Server) {
-  log('Setting up WebSocket server', 'websocket');
+  console.log('Setting up WebSocket server');
+  wss = new WebSocketServer({ server }); // REMOVED PATH PARAMETER
   
-  const wss = new WebSocketServer({ server });
-
   wss.on('connection', (ws: WebSocket) => {
-    log('WebSocket client connected', 'websocket');
-    clients.set(ws, {});
-    
-    ws.on('message', (message: string) => {
-      try {
-        const parsedMessage = JSON.parse(message) as { type: string; userId?: number; data?: any };
-        if (parsedMessage.type === 'auth' && parsedMessage.userId) {
-          const clientInfo = clients.get(ws);
-          if (clientInfo) {
-            clientInfo.userId = parsedMessage.userId;
-            log(`WebSocket client authenticated with userId: ${parsedMessage.userId}`, 'websocket');
-          }
-        }
-      } catch (error) {
-        log(`Error parsing WebSocket message: ${error}`, 'websocket');
-      }
-    });
-    
-    ws.on('close', () => {
-      log('WebSocket client disconnected', 'websocket');
-      clients.delete(ws);
-    });
+    console.log('New WebSocket connection');
     
     ws.on('error', (error) => {
-      log(`WebSocket error: ${error.message}`, 'websocket');
-      clients.delete(ws);
+      console.error('WebSocket error:', error);
     });
-    
-    ws.send(JSON.stringify({ type: WebSocketEvent.PING, data: { message: 'Connected to Fluxion WebSocket server' } }));
   });
   
-  log('WebSocket server setup complete', 'websocket');
+  console.log('WebSocket server setup complete');
   return wss;
 }
 
 export function broadcastMessage(event: WebSocketEvent, data: any) {
-  const message: WebSocketMessage = { type: event, data };
-  const messageStr = JSON.stringify(message);
+  if (!wss) return;
   
-  log(`Broadcasting ${event} event to ${clients.size} clients`, 'websocket');
-  
-  clients.forEach((_, client) => {
+  const message = JSON.stringify({ event, data });
+  wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(messageStr);
+      client.send(message);
     }
   });
-}
-
-export function sendToUser(userId: number, event: WebSocketEvent, data: any) {
-  const message: WebSocketMessage = { type: event, data };
-  const messageStr = JSON.stringify(message);
-  
-  let sentToAny = false;
-  
-  clients.forEach((clientInfo, client) => {
-    if (clientInfo.userId === userId && client.readyState === WebSocket.OPEN) {
-      client.send(messageStr);
-      sentToAny = true;
-    }
-  });
-  
-  log(`Sent ${event} event to user ${userId}: ${sentToAny ? 'success' : 'no matching clients'}`, 'websocket');
 }
