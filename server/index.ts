@@ -82,7 +82,7 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files with proper MIME types AND CACHE SETTINGS // UPDATED SECTION
+    // Serve static files with proper MIME types and cache settings
     app.use(express.static(clientBuildPath, {
       maxAge: '1y', // Cache for 1 year
       etag: true,   // Enable ETag validation
@@ -100,16 +100,22 @@ app.use((req, res, next) => {
       }
     }));
     
-    // Handle SPA routing
-    app.get("*", (req, res) => {
-      const indexPath = path.join(clientBuildPath, "index.html");
+    // Handle SPA routing - FIXED WILDCARD ROUTE HANDLING
+    app.get('*', (req, res, next) => {
+      // Skip API routes and static files
+      if (req.path.startsWith('/api') || 
+          req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+        return next();
+      }
+      
+      const indexPath = path.join(clientBuildPath, 'index.html');
       console.log(`Serving index.html for: ${req.path}`);
       
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
         console.error(`❌ index.html not found at ${indexPath}`);
-        res.status(404).send("Page not found");
+        res.status(404).send('Page not found');
       }
     });
 
