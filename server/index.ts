@@ -4,24 +4,20 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 
-// Calculate paths - FIXED PATH RESOLUTION
+// Calculate paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Use process.cwd() to get Render's working directory
-const basePath = process.cwd();
-const clientBuildPath = path.join(basePath, "client");
+// Determine client build path
+let clientBuildPath = path.join(process.cwd(), "client/dist");
 
-// Verify client build directory exists
-console.log(`Verifying client build at: ${clientBuildPath}`);
+// Fallback to client source directory if dist doesn't exist
 if (!fs.existsSync(clientBuildPath)) {
-  console.error("❌ Client build directory not found!");
-  console.log("Current working directory:", basePath);
-  console.log("Directory contents:", fs.readdirSync(basePath));
-} else {
-  console.log("✅ Client build directory verified");
-  console.log("Files in directory:", fs.readdirSync(clientBuildPath));
+  clientBuildPath = path.join(process.cwd(), "client");
 }
+
+console.log(`Using client build path: ${clientBuildPath}`);
+console.log("Client directory contents:", fs.readdirSync(clientBuildPath));
 
 const log = console.log;
 const app = express();
@@ -69,11 +65,8 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // SAFETY WRAPPER FOR ROUTE REGISTRATION
-    console.log("Starting route registration...");
     const server = await registerRoutes(app);
-    console.log("Route registration completed successfully");
-    
+
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -89,12 +82,20 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files from client directory
-    console.log(`Serving static files from: ${clientBuildPath}`);
-    app.use(express.static(clientBuildPath));
+    // Serve static files with proper MIME types
+    app.use(express.static(clientBuildPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".js")) {
+          res.setHeader("Content-Type", "application/javascript");
+        }
+        if (filePath.endsWith(".css")) {
+          res.setHeader("Content-Type", "text/css");
+        }
+      }
+    }));
     
-    // Handle SPA routing - SAFE IMPLEMENTATION
-    app.get(/^(?!\/api).*/, (req, res) => {
+    // Handle SPA routing
+    app.get("*", (req, res) => {
       const indexPath = path.join(clientBuildPath, "index.html");
       console.log(`Serving index.html for: ${req.path}`);
       
@@ -116,17 +117,6 @@ app.use((req, res, next) => {
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       console.error("Stack trace:", error.stack);
-      
-      // Add specific diagnostics for route errors
-      if (error.message.includes("Missing parameter name")) {
-        console.error("\n🔍 ROUTE DIAGNOSTICS:");
-        console.error("This error is typically caused by an invalid route pattern");
-        console.error("Please check all routes in your application for:");
-        console.error("1. Missing parameter names after colons");
-        console.error("2. Empty route patterns");
-        console.error("3. Special characters in route patterns");
-        console.error("4. Middleware with invalid path parameters");
-      }
     }
     process.exit(1);
   }
