@@ -86,6 +86,13 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     console.error("🚨 Critical error during server setup:", error);
+    if (error instanceof Error) {
+      console.error("Full error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
     process.exit(1);
   }
 })();
