@@ -7,7 +7,7 @@ import fs from "fs";
 // Calculate paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const clientBuildPath = path.join(__dirname, "../../client/dist");
+const clientBuildPath = path.join(__dirname, "../../client"); // Updated path
 
 // Verify client build directory exists
 console.log(`Verifying client build at: ${clientBuildPath}`);
@@ -81,11 +81,11 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files from client/dist
+    // Serve static files from client directory (updated path)
     console.log(`Serving static files from: ${clientBuildPath}`);
     app.use(express.static(clientBuildPath));
     
-    // Handle SPA routing - FIXED REGEX
+    // Handle SPA routing
     app.get(/.*/, (req, res) => {
       console.log(`Serving index.html for: ${req.path}`);
       res.sendFile(path.join(clientBuildPath, "index.html"));
