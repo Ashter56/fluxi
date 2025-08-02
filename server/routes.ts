@@ -27,6 +27,11 @@ export async function registerRoutes(app: Express, includeWildcard: boolean = tr
     const original = (app as any)[method];
     if (original) {
       (app as any)[method] = function (path: any, ...handlers: any[]) {
+        // SKIP VALIDATION FOR WILDCARD ROUTES - CRITICAL FIX
+        if (path === '*') {
+          return original.call(this, path, ...handlers);
+        }
+        
         // Validate route path format
         if (typeof path === 'string') {
           console.log(`🔹 Registering ${method.toUpperCase()} route: ${path}`);
