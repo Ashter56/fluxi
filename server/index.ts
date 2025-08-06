@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes.js";
+import { registerRoutes } from "./routes";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -65,9 +65,8 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // FIRST: Register all regular routes EXCEPT the wildcard
-    const server = await registerRoutes(app, false); // Pass false to skip wildcard
-    
+    const server = await registerRoutes(app);
+
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -83,10 +82,8 @@ app.use((req, res, next) => {
       res.send("Server is running");
     });
 
-    // Serve static files with proper MIME types and cache settings
+    // Serve static files with proper MIME types
     app.use(express.static(clientBuildPath, {
-      maxAge: '1y',
-      etag: true,
       setHeaders: (res, filePath) => {
         if (filePath.endsWith(".js")) {
           res.setHeader("Content-Type", "application/javascript");
@@ -94,27 +91,17 @@ app.use((req, res, next) => {
         if (filePath.endsWith(".css")) {
           res.setHeader("Content-Type", "text/css");
         }
-        if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-          res.setHeader('Cache-Control', 'public, max-age=31536000');
-        }
       }
     }));
     
-    // Handle SPA routing - PROPERLY FORMATED WILDCARD
-    app.get('*', (req, res) => {
-      // Skip API routes and static files
-      if (req.path.startsWith('/api') || 
-          req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-        return res.status(404).send('Not found');
-      }
-      
-      const indexPath = path.join(clientBuildPath, 'index.html');
+    // Handle SPA routing
+    app.get("*", (req, res) => {
+      const indexPath = path.join(clientBuildPath, "index.html");
       
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
-        console.error(`❌ index.html not found at ${indexPath}`);
-        res.status(404).send('Page not found');
+        res.status(404).send("Page not found");
       }
     });
 
