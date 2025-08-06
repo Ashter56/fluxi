@@ -22,11 +22,11 @@ console.log("Client directory contents:", fs.readdirSync(clientBuildPath));
 
 const app = express();
 
-// Basic middleware setup
+// FIXED: Minimal middleware setup to avoid any conflicts
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// FIXED: Minimal error handling to avoid any route pattern conflicts
+// FIXED: Simplified error handling
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ message: "Internal Server Error" });
   console.error(`[ERROR] ${err.message}`);
@@ -39,10 +39,23 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     // Create HTTP server first
     const server = http.createServer(app);
     
-    // Register routes
+    // Register routes with debug logging
     console.log("🔄 Registering routes...");
-    await registerRoutes(app);
-    console.log("✅ Routes registered successfully");
+    try {
+      await registerRoutes(app);
+      console.log("✅ Routes registered successfully");
+      
+      // Debug: Log all registered routes
+      console.log("📋 Registered routes:");
+      app._router.stack.forEach((layer: any) => {
+        if (layer.route && layer.route.path) {
+          console.log(`  - ${layer.route.methods} ${layer.route.path}`);
+        }
+      });
+    } catch (routeError) {
+      console.error("🚨 Route registration error:", routeError);
+      throw routeError;
+    }
 
     // Serve static files
     app.use(express.static(clientBuildPath, {
@@ -50,30 +63,34 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       maxAge: "1d"
     }));
     
-    // FIXED: SAFEST APPROACH - Avoid wildcard routing completely
-    // Instead, explicitly define the SPA fallback route
+    // FIXED: Explicit SPA routes - add all your client-side routes here
     const indexPath = path.join(clientBuildPath, "index.html");
+    const spaRoutes = [
+      "/",
+      "/login",
+      "/register",
+      "/dashboard",
+      "/profile",
+      "/tasks",
+      "/tasks/:id",
+      "/users/:id",
+      "/settings"
+    ];
     
-    // Define explicit routes for SPA paths
-    const spaPaths = ["/", "/login", "/register", "/dashboard", "/profile", "/tasks"];
-    spaPaths.forEach(route => {
+    spaRoutes.forEach(route => {
       app.get(route, (req, res) => {
         res.sendFile(indexPath);
       });
     });
     
     // API 404 handler
-    app.get("/api/*", (req, res) => {
+    app.all("/api/*", (req, res) => {
       res.status(404).json({ message: "API endpoint not found" });
     });
     
     // Generic 404 handler
     app.use((req, res) => {
-      if (req.accepts("html")) {
-        res.sendFile(indexPath);
-      } else {
-        res.status(404).json({ message: "Not found" });
-      }
+      res.status(404).json({ message: "Not found" });
     });
 
     const port = process.env.PORT || 5000;
@@ -87,8 +104,13 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
       console.error("Error message:", error.message);
+      
+      // FIXED: Special handling for path-to-regexp errors
+      if (error.message.includes("pathToRegexpError")) {
+        console.error("💡 SOLUTION: Please check all route patterns for invalid syntax");
+        console.error("💡 TIP: Look for routes with empty parameters like '/api//endpoint' or missing parameter names");
+      }
     }
-    console.error("Please check your route configurations");
     process.exit(1);
   }
 })();
