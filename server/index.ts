@@ -26,12 +26,10 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// FIXED: Simplified error handling
+// FIXED: Minimal error handling to avoid any route pattern conflicts
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ message });
-  console.error(`[ERROR] ${status} - ${message}`);
+  res.status(500).json({ message: "Internal Server Error" });
+  console.error(`[ERROR] ${err.message}`);
 });
 
 (async () => {
@@ -41,41 +39,41 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     // Create HTTP server first
     const server = http.createServer(app);
     
-    // Register routes with enhanced error handling
+    // Register routes
     console.log("🔄 Registering routes...");
-    try {
-      await registerRoutes(app);
-      console.log("✅ Routes registered successfully");
-    } catch (routeError) {
-      console.error("🚨 Route registration failed:", routeError);
-      throw routeError;
-    }
+    await registerRoutes(app);
+    console.log("✅ Routes registered successfully");
 
-    // Serve static files - FIXED: Explicitly define the root
+    // Serve static files
     app.use(express.static(clientBuildPath, {
-      index: false, // Disable automatic index.html serving
-      maxAge: "1d"  // Cache static assets
+      index: false,
+      maxAge: "1d"
     }));
     
-    // FIXED: Simplified and secured SPA routing
+    // FIXED: SAFEST APPROACH - Avoid wildcard routing completely
+    // Instead, explicitly define the SPA fallback route
     const indexPath = path.join(clientBuildPath, "index.html");
     
-    // Verify index.html exists
-    if (!fs.existsSync(indexPath)) {
-      throw new Error(`SPA index file not found at ${indexPath}`);
-    }
+    // Define explicit routes for SPA paths
+    const spaPaths = ["/", "/login", "/register", "/dashboard", "/profile", "/tasks"];
+    spaPaths.forEach(route => {
+      app.get(route, (req, res) => {
+        res.sendFile(indexPath);
+      });
+    });
     
-    console.log(`✅ SPA index file found at ${indexPath}`);
-    
-    // Handle SPA routing - FIXED: Safe pattern without wildcard issues
-    app.get("*", (req, res) => {
-      // Only serve index.html for non-API routes
-      if (!req.path.startsWith("/api")) {
-        return res.sendFile(indexPath);
-      }
-      
-      // For API routes, return 404
+    // API 404 handler
+    app.get("/api/*", (req, res) => {
       res.status(404).json({ message: "API endpoint not found" });
+    });
+    
+    // Generic 404 handler
+    app.use((req, res) => {
+      if (req.accepts("html")) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).json({ message: "Not found" });
+      }
     });
 
     const port = process.env.PORT || 5000;
@@ -89,13 +87,8 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
       console.error("Error message:", error.message);
-      // Avoid logging full stack in production
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Stack trace:", error.stack);
-      }
-    } else {
-      console.error("Unknown error:", error);
     }
+    console.error("Please check your route configurations");
     process.exit(1);
   }
 })();
