@@ -13,61 +13,9 @@ import {
 import { setupAuth } from "./auth";
 import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
 
-// Import analytics API router
-const analyticsRouter = require('../analytics-api');
+export async function registerRoutes(app: Express): Promise<Server> {
+  console.log("🔒 Setting up routes...");
 
-export async function registerRoutes(app: Express, includeWildcard: boolean = true): Promise<Server> {
-  // ======================================================
-  // START OF SAFETY CHECKS - VALIDATE ALL ROUTE PATTERNS
-  // ======================================================
-  console.log("🔒 Adding route validation safety checks...");
-  const methods = ['get', 'post', 'put', 'delete', 'patch', 'use', 'options', 'head'];
-  
-  for (const method of methods) {
-    const original = (app as any)[method];
-    if (original) {
-      (app as any)[method] = function (path: any, ...handlers: any[]) {
-        // SKIP VALIDATION FOR WILDCARD ROUTES - CRITICAL FIX
-        if (path === '*') {
-          return original.call(this, path, ...handlers);
-        }
-        
-        // Validate route path format
-        if (typeof path === 'string') {
-          console.log(`🔹 Registering ${method.toUpperCase()} route: ${path}`);
-          
-          // Check for common issues in route patterns
-          if (path.includes(':') && !/:[\w]+/.test(path)) {
-            console.error(`🚨 POTENTIAL ISSUE: Route pattern has colon without parameter name: ${path}`);
-            console.error("   Fix: Add a parameter name after colon (e.g. '/api/users/:id')");
-          }
-          
-          if (path.includes('//')) {
-            console.error(`🚨 POTENTIAL ISSUE: Double slash in route pattern: ${path}`);
-          }
-          
-          if (path.endsWith('/:')) {
-            console.error(`🚨 CRITICAL ISSUE: Route ends with colon: ${path}`);
-            throw new Error(`Invalid route pattern: ${path} - colon at end`);
-          }
-          
-          // Additional check for colon at position 1
-          if (path.length >= 2 && path[1] === ':' && !/:[\w]+/.test(path)) {
-            console.error(`🚨 CRITICAL ISSUE: Colon at invalid position: ${path}`);
-            throw new Error(`Invalid route pattern: ${path} - colon at position 1`);
-          }
-        } else if (typeof path !== 'function') {
-          console.warn(`⚠️ Non-string route path for ${method}:`, path);
-        }
-        
-        return original.call(this, path, ...handlers);
-      };
-    }
-  }
-  // ======================================================
-  // END OF SAFETY CHECKS
-  // ======================================================
-  
   // Set up authentication
   setupAuth(app);
   
