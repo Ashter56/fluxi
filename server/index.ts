@@ -26,18 +26,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
-// Error handling middleware
+// FIXED: Simplified error handling
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
+  const status = err.status || 500;
   const message = err.message || "Internal Server Error";
   res.status(status).json({ message });
-  console.error(`[ERROR] ${status} - ${message}`, err);
+  console.error(`[ERROR] ${status} - ${message}`);
 });
 
 (async () => {
@@ -47,21 +41,41 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     // Create HTTP server first
     const server = http.createServer(app);
     
-    // Register routes
+    // Register routes with enhanced error handling
     console.log("🔄 Registering routes...");
-    await registerRoutes(app);
-    
-    // Simple status endpoint
-    app.get("/status", (_, res) => {
-      res.send("Server is running");
-    });
+    try {
+      await registerRoutes(app);
+      console.log("✅ Routes registered successfully");
+    } catch (routeError) {
+      console.error("🚨 Route registration failed:", routeError);
+      throw routeError;
+    }
 
-    // Serve static files
-    app.use(express.static(clientBuildPath));
+    // Serve static files - FIXED: Explicitly define the root
+    app.use(express.static(clientBuildPath, {
+      index: false, // Disable automatic index.html serving
+      maxAge: "1d"  // Cache static assets
+    }));
     
-    // Handle SPA routing
+    // FIXED: Simplified and secured SPA routing
+    const indexPath = path.join(clientBuildPath, "index.html");
+    
+    // Verify index.html exists
+    if (!fs.existsSync(indexPath)) {
+      throw new Error(`SPA index file not found at ${indexPath}`);
+    }
+    
+    console.log(`✅ SPA index file found at ${indexPath}`);
+    
+    // Handle SPA routing - FIXED: Safe pattern without wildcard issues
     app.get("*", (req, res) => {
-      res.sendFile(path.join(clientBuildPath, "index.html"));
+      // Only serve index.html for non-API routes
+      if (!req.path.startsWith("/api")) {
+        return res.sendFile(indexPath);
+      }
+      
+      // For API routes, return 404
+      res.status(404).json({ message: "API endpoint not found" });
     });
 
     const port = process.env.PORT || 5000;
@@ -75,7 +89,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
       console.error("Error message:", error.message);
-      console.error("Stack trace:", error.stack);
+      // Avoid logging full stack in production
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Stack trace:", error.stack);
+      }
+    } else {
+      console.error("Unknown error:", error);
     }
     process.exit(1);
   }
