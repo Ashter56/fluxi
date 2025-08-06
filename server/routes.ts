@@ -1,5 +1,4 @@
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import {
@@ -13,11 +12,11 @@ import {
 import { setupAuth } from "./auth";
 import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  console.log("🔒 Setting up routes...");
-
-  // Set up authentication
+export async function registerRoutes(app: Express): Promise<void> {
+  console.log("🛡️ Setting up authentication...");
   setupAuth(app);
+  
+  console.log("🛣️ Setting up API routes...");
   
   // Users endpoints
   app.get("/api/users/:id", async (req: Request, res: Response) => {
@@ -340,11 +339,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Create HTTP server
-  const httpServer = createServer(app);
-  
-  // Set up WebSocket server
-  const wss = setupWebSocketServer(httpServer);
-  
-  return httpServer;
+  console.log("✅ All routes registered successfully");
 }
