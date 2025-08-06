@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import http from "http";
 
 // Calculate paths
 const __filename = fileURLToPath(import.meta.url);
@@ -19,7 +20,6 @@ if (!fs.existsSync(clientBuildPath)) {
 console.log(`Using client build path: ${clientBuildPath}`);
 console.log("Client directory contents:", fs.readdirSync(clientBuildPath));
 
-const log = console.log;
 const app = express();
 
 // Basic middleware setup
@@ -28,88 +28,49 @@ app.use(express.urlencoded({ extended: false }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Performance logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  const requestPath = req.path;
-  let capturedJsonResponse: any = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (requestPath.startsWith("/api")) {
-      let logLine = `${req.method} ${requestPath} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
+// Error handling middleware
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ message });
+  console.error(`[ERROR] ${status} - ${message}`, err);
 });
 
 (async () => {
   try {
-    const server = await registerRoutes(app);
-
-    // Error handling middleware
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-
-      res.status(status).json({ message });
-      log(`[ERROR] ${status} - ${message}`);
-      console.error(err);
-    });
-
+    console.log("🚀 Starting server initialization...");
+    
+    // Create HTTP server first
+    const server = http.createServer(app);
+    
+    // Register routes
+    console.log("🔄 Registering routes...");
+    await registerRoutes(app);
+    
     // Simple status endpoint
     app.get("/status", (_, res) => {
       res.send("Server is running");
     });
 
-    // Serve static files with proper MIME types
-    app.use(express.static(clientBuildPath, {
-      setHeaders: (res, filePath) => {
-        if (filePath.endsWith(".js")) {
-          res.setHeader("Content-Type", "application/javascript");
-        }
-        if (filePath.endsWith(".css")) {
-          res.setHeader("Content-Type", "text/css");
-        }
-      }
-    }));
+    // Serve static files
+    app.use(express.static(clientBuildPath));
     
     // Handle SPA routing
     app.get("*", (req, res) => {
-      const indexPath = path.join(clientBuildPath, "index.html");
-      
-      if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-      } else {
-        res.status(404).send("Page not found");
-      }
+      res.sendFile(path.join(clientBuildPath, "index.html"));
     });
 
     const port = process.env.PORT || 5000;
     server.listen(port, "0.0.0.0", () => {
-      log(`Server started on port ${port}`);
-      log(`Environment: ${process.env.NODE_ENV || "development"}`);
+      console.log(`✅ Server started on port ${port}`);
+      console.log(`🌿 Environment: ${process.env.NODE_ENV || "development"}`);
     });
+    
+    console.log("🎉 Server initialization complete");
   } catch (error) {
     console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
