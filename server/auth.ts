@@ -80,6 +80,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Auth routes
   app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, username, password, displayName } = req.body;
@@ -160,10 +161,10 @@ export function setupAuth(app: Express) {
     });
   });
   
-  // FIXED: Authentication middleware without route pattern issues
+  // FIXED: Authentication middleware with safe route patterns
   app.use((req, res, next) => {
     // Skip authentication for non-API routes
-    if (!req.path.startsWith("/api/")) {
+    if (!req.path.startsWith("/api")) {
       return next();
     }
     
@@ -180,7 +181,7 @@ export function setupAuth(app: Express) {
     ];
     
     // Allow access to public paths
-    if (publicPaths.includes(req.path)) {
+    if (publicPaths.some(path => req.path === path)) {
       return next();
     }
     
