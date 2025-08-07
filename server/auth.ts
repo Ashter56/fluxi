@@ -1,9 +1,9 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express, Request, Response, NextFunction } from "express";
+import { Express, Request, Response } from "express";
 import bcrypt from 'bcryptjs';
 import { storage } from "./storage";
-import { User as SelectUser } from  "../shared/schema";
+import { User as SelectUser } from "../shared/schema";
 
 const saltRounds = 10;
 
@@ -13,16 +13,16 @@ declare global {
   }
 }
 
-async function hashPassword(password: string) {
-  return await bcrypt.hash(password, saltRounds);
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, saltRounds);
 }
 
-async function comparePasswords(supplied: string, stored: string) {
-  return await bcrypt.compare(supplied, stored);
+async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
+  return bcrypt.compare(supplied, stored);
 }
 
-export function setupAuth(app: Express) {
-  // Initialize passport
+export function setupAuth(app: Express): void {
+  // Initialize passport without session
   app.use(passport.initialize());
 
   passport.use(
@@ -42,19 +42,8 @@ export function setupAuth(app: Express) {
       } catch (error) {
         return done(error);
       }
-    }),
+    })
   );
-
-  // Serialization/deserialization not needed for stateless auth
-  passport.serializeUser((user, done) => done(null, user.id));
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (error) {
-      done(error);
-    }
-  });
 
   app.post("/api/register", async (req: Request, res: Response) => {
     try {
@@ -74,12 +63,15 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      const hashedPassword = await hashPassword(password);
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
+
       const user = await storage.createUser({
         email,
         username,
         displayName,
-        password: await hashPassword(password),
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`
+        password: hashedPassword,
+        avatarUrl
       });
 
       res.status(201).json({
@@ -98,7 +90,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
+    passport.authenticate("local", (err, user, info) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
       
@@ -113,7 +105,10 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     res.json({
       id: req.user.id,
       email: req.user.email,
