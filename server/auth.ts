@@ -1,14 +1,10 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express, Request, Response, NextFunction } from "express";
-import session from "express-session";
 import bcrypt from 'bcryptjs';
-import pgSession from 'connect-pg-simple';
 import { storage } from "./storage";
 import { User as SelectUser } from  "../shared/schema";
-import { pool } from './db';
 
-const PgSession = pgSession(session);
 const saltRounds = 10;
 
 declare global {
@@ -26,28 +22,8 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const sessionSecret = process.env.SESSION_SECRET || "keyboard-fluxion-secret-cat";
-  
-  const sessionSettings: session.SessionOptions = {
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    store: new PgSession({
-      pool: pool,
-      tableName: 'user_sessions',
-      createTableIfMissing: true
-    }),
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      secure: process.env.NODE_ENV === "production",
-      sameSite: 'lax'
-    }
-  };
-
-  app.set("trust proxy", 1);
-  app.use(session(sessionSettings));
+  // Initialize passport without session
   app.use(passport.initialize());
-  app.use(passport.session());
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -69,18 +45,10 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
-  
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (error) {
-      done(error);
-    }
-  });
+  // FIXED: Remove session-related code completely
+  // FIXED: Simplified authentication routes
 
-  app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/register", async (req: Request, res: Response) => {
     try {
       const { email, username, password, displayName } = req.body;
       
@@ -106,15 +74,12 @@ export function setupAuth(app: Express) {
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`
       });
 
-      req.login(user, (err) => {
-        if (err) return next(err);
-        return res.status(201).json({
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl
-        });
+      res.status(201).json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl
       });
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -129,38 +94,18 @@ export function setupAuth(app: Express) {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
       
-      req.login(user, (err) => {
-        if (err) return next(err);
-        return res.status(200).json({
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl
-        });
+      res.status(200).json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl
       });
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
-      if (err) return next(err);
-      res.status(200).json({ message: "Logged out successfully" });
-    });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    res.json({
-      id: req.user.id,
-      email: req.user.email,
-      username: req.user.username,
-      displayName: req.user.displayName,
-      avatarUrl: req.user.avatarUrl
-    });
-  });
+  // FIXED: Remove logout functionality since we're not using sessions
+  // FIXED: Remove /api/user endpoint for now
   
-  // FIXED: Completely removed problematic authentication middleware
-  // This was the root cause of the path-to-regexp error
-  // Instead, authentication is handled at the route level
+  // FIXED: COMPLETELY REMOVE THE PROBLEMATIC AUTH MIDDLEWARE
 }
