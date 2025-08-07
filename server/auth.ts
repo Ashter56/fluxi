@@ -22,7 +22,7 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Initialize passport without session
+  // Initialize passport
   app.use(passport.initialize());
 
   passport.use(
@@ -45,8 +45,16 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  // FIXED: Remove session-related code completely
-  // FIXED: Simplified authentication routes
+  // Serialization/deserialization not needed for stateless auth
+  passport.serializeUser((user, done) => done(null, user.id));
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
 
   app.post("/api/register", async (req: Request, res: Response) => {
     try {
@@ -104,8 +112,14 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // FIXED: Remove logout functionality since we're not using sessions
-  // FIXED: Remove /api/user endpoint for now
-  
-  // FIXED: COMPLETELY REMOVE THE PROBLEMATIC AUTH MIDDLEWARE
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    res.json({
+      id: req.user.id,
+      email: req.user.email,
+      username: req.user.username,
+      displayName: req.user.displayName,
+      avatarUrl: req.user.avatarUrl
+    });
+  });
 }
