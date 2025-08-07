@@ -39,23 +39,10 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     // Create HTTP server first
     const server = http.createServer(app);
     
-    // Register routes with debug logging
+    // Register routes
     console.log("🔄 Registering routes...");
-    try {
-      await registerRoutes(app);
-      console.log("✅ Routes registered successfully");
-      
-      // Debug: Log all registered routes
-      console.log("📋 Registered routes:");
-      app._router.stack.forEach((layer: any) => {
-        if (layer.route && layer.route.path) {
-          console.log(`  - ${layer.route.methods} ${layer.route.path}`);
-        }
-      });
-    } catch (routeError) {
-      console.error("🚨 Route registration error:", routeError);
-      throw routeError;
-    }
+    await registerRoutes(app);
+    console.log("✅ Routes registered successfully");
 
     // Serve static files
     app.use(express.static(clientBuildPath, {
@@ -63,24 +50,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       maxAge: "1d"
     }));
     
-    // FIXED: Explicit SPA routes - add all your client-side routes here
+    // FIXED: SAFEST APPROACH - Avoid any complex routing patterns
     const indexPath = path.join(clientBuildPath, "index.html");
-    const spaRoutes = [
-      "/",
-      "/login",
-      "/register",
-      "/dashboard",
-      "/profile",
-      "/tasks",
-      "/tasks/:id",
-      "/users/:id",
-      "/settings"
-    ];
     
-    spaRoutes.forEach(route => {
-      app.get(route, (req, res) => {
-        res.sendFile(indexPath);
-      });
+    // Only define a root handler
+    app.get("/", (req, res) => {
+      res.sendFile(indexPath);
     });
     
     // API 404 handler
@@ -100,14 +75,40 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     });
     
     console.log("🎉 Server initialization complete");
+    
+    // FIXED: Safe route debugging using Express 5.x compatible method
+    try {
+      console.log("📋 Registered routes:");
+      const routes: string[] = [];
+      app._router.stack.forEach((middleware: any) => {
+        if (middleware.route) {
+          // Routes registered directly on the app
+          const methods = Object.keys(middleware.route.methods).join(', ').toUpperCase();
+          routes.push(`${methods} ${middleware.route.path}`);
+        } else if (middleware.name === 'router') {
+          // Routes from router middleware
+          middleware.handle.stack.forEach((handler: any) => {
+            const route = handler.route;
+            if (route) {
+              const methods = Object.keys(route.methods).join(', ').toUpperCase();
+              routes.push(`${methods} ${route.path}`);
+            }
+          });
+        }
+      });
+      
+      console.log(routes.join('\n'));
+    } catch (debugError) {
+      console.error("⚠️ Route debugging failed:", debugError.message);
+    }
   } catch (error) {
     console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       
-      // FIXED: Special handling for path-to-regexp errors
+      // Special handling for path-to-regexp errors
       if (error.message.includes("pathToRegexpError")) {
-        console.error("💡 SOLUTION: Please check all route patterns for invalid syntax");
+        console.error("💡 SOLUTION: Check all route patterns for invalid syntax");
         console.error("💡 TIP: Look for routes with empty parameters like '/api//endpoint' or missing parameter names");
       }
     }
