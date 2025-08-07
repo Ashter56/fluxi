@@ -22,16 +22,14 @@ console.log("Client directory contents:", fs.readdirSync(clientBuildPath));
 
 const app = express();
 
-// Basic middleware setup
+// FIXED: Minimal middleware setup
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Error handling middleware
+// FIXED: Safe error handling
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ message });
-  console.error(`[ERROR] ${status} - ${message}`);
+  res.status(500).json({ message: "Internal Server Error" });
+  console.error(`[ERROR] ${err.message}`);
 });
 
 (async () => {
@@ -41,17 +39,43 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     // Create HTTP server first
     const server = http.createServer(app);
     
-    // Register routes
+    // FIXED: Register routes safely
     console.log("🔄 Registering routes...");
-    await registerRoutes(app);
-    console.log("✅ Routes registered successfully");
+    try {
+      await registerRoutes(app);
+      console.log("✅ Routes registered successfully");
+    } catch (error) {
+      console.error("🚨 Route registration error:", error);
+      throw error;
+    }
 
     // Serve static files
-    app.use(express.static(clientBuildPath));
+    app.use(express.static(clientBuildPath, {
+      index: false,
+      maxAge: "1d"
+    }));
     
-    // Handle SPA routing
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(clientBuildPath, "index.html"));
+    // FIXED: Simple SPA routing without wildcard pattern
+    const indexPath = path.join(clientBuildPath, "index.html");
+    
+    // Explicit routes for SPA
+    app.get("/", (req, res) => res.sendFile(indexPath));
+    app.get("/login", (req, res) => res.sendFile(indexPath));
+    app.get("/register", (req, res) => res.sendFile(indexPath));
+    app.get("/dashboard", (req, res) => res.sendFile(indexPath));
+    app.get("/profile", (req, res) => res.sendFile(indexPath));
+    app.get("/tasks", (req, res) => res.sendFile(indexPath));
+    app.get("/tasks/:id", (req, res) => res.sendFile(indexPath));
+    app.get("/users/:id", (req, res) => res.sendFile(indexPath));
+    
+    // API 404 handler
+    app.all("/api/*", (req, res) => {
+      res.status(404).json({ message: "API endpoint not found" });
+    });
+    
+    // Generic 404 handler
+    app.use((req, res) => {
+      res.status(404).json({ message: "Not found" });
     });
 
     const port = process.env.PORT || 5000;
