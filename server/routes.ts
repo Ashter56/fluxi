@@ -10,17 +10,7 @@ import {
   type TaskStatus
 } from  "../shared/schema";
 import { setupAuth } from "./auth";
-
-// Safe WebSocket implementation
-const broadcastMessage = (event: string, data: any) => {
-  console.log(`[WebSocket] Broadcast: ${event}`, data);
-};
-
-enum WebSocketEvent {
-  NEW_TASK = "new_task",
-  TASK_STATUS_UPDATE = "task_status_update",
-  LIKE = "like"
-}
+import { broadcastMessage, WebSocketEvent } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<void> {
   console.log("🛡️ Setting up authentication...");
@@ -40,7 +30,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Remove password before sending
     const { password, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
   });
@@ -56,7 +45,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Remove password before sending
     const { password, ...userWithoutPassword } = userWithStats;
     res.json(userWithoutPassword);
   });
@@ -65,7 +53,6 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/tasks", async (req: Request, res: Response) => {
     const tasks = await storage.getTasks();
     
-    // Add "liked" status for current user if authenticated
     let tasksWithLikeStatus = tasks;
     
     if (req.isAuthenticated() && req.user) {
@@ -76,11 +63,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         })
       );
     } else {
-      // No authenticated user, no likes
       tasksWithLikeStatus = tasks.map(task => ({ ...task, liked: false }));
     }
     
-    // Sort tasks: newest first
     const sortedTasks = tasksWithLikeStatus.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
@@ -108,7 +93,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    // Add "liked" status for current user if authenticated
     let liked = false;
     if (req.isAuthenticated() && req.user) {
       const likeRecord = await storage.getLike(req.user.id, task.id);
@@ -124,23 +108,18 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
     
     try {
-      // Validate request body
       const taskData = insertTaskSchema.parse({
         ...req.body,
-        userId: req.user.id, // Use the authenticated user
+        userId: req.user.id,
       });
       
-      // Validate task status
       if (!taskStatus.safeParse(taskData.status).success) {
         return res.status(400).json({ message: "Invalid task status" });
       }
       
       const task = await storage.createTask(taskData);
-      
-      // Get full task with user details for broadcasting
       const fullTask = await storage.getTask(task.id);
       
-      // Broadcast the new task to all connected clients
       broadcastMessage(WebSocketEvent.NEW_TASK, fullTask);
       
       res.status(201).json(task);
@@ -168,28 +147,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      // Check task ownership
       if (task.userId !== req.user.id) {
         return res.status(403).json({ message: "You cannot update this task" });
       }
       
-      // Validate partial update
       const taskUpdateSchema = insertTaskSchema.partial();
       const taskUpdate = taskUpdateSchema.parse(req.body);
       
-      // Validate task status if provided
       if (taskUpdate.status && !taskStatus.safeParse(taskUpdate.status).success) {
         return res.status(400).json({ message: "Invalid task status" });
       }
       
-      // Cast status as TaskStatus if present
       if (taskUpdate.status) {
         taskUpdate.status = taskUpdate.status as TaskStatus;
       }
       
       const updatedTask = await storage.updateTask(taskId, taskUpdate);
       
-      // If status was updated, broadcast the status change
       if (taskUpdate.status) {
         const fullTask = await storage.getTask(taskId);
         if (fullTask) {
@@ -221,7 +195,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    // Check task ownership
     const isAdmin = req.user.username === "ashterabbas";
     if (task.userId !== req.user.id && !isAdmin) {
       return res.status(403).json({ message: "You cannot delete this task" });
@@ -262,7 +235,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      // Validate request body
       const commentData = insertCommentSchema.parse({
         ...req.body,
         userId: req.user.id,
@@ -301,15 +273,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      // Check if already liked
       const existingLike = await storage.getLike(req.user.id, taskId);
       if (existingLike) {
-        // Unlike if already liked
         await storage.deleteLike(req.user.id, taskId);
-        
         const updatedTask = await storage.getTask(taskId);
         
-        // Broadcast like update
         if (updatedTask) {
           broadcastMessage(WebSocketEvent.LIKE, {
             ...updatedTask,
@@ -321,17 +289,14 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.json({ ...updatedTask, liked: false });
       }
       
-      // Like the task
       const likeData = insertLikeSchema.parse({
         userId: req.user.id,
         taskId
       });
       
       await storage.createLike(likeData);
-      
       const updatedTask = await storage.getTask(taskId);
       
-      // Broadcast like update
       if (updatedTask) {
         broadcastMessage(WebSocketEvent.LIKE, {
           ...updatedTask,
