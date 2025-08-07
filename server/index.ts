@@ -26,25 +26,35 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 // Error handling middleware
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
   res.status(status).json({ message });
-  console.error(`[ERROR] ${status} - ${message}`);
+  console.error(`[ERROR] ${status} - ${message}`, err);
 });
 
 (async () => {
   try {
     console.log("🚀 Starting server initialization...");
     
-    // Create HTTP server first
+    // Create HTTP server
     const server = http.createServer(app);
     
     // Register routes
     console.log("🔄 Registering routes...");
     await registerRoutes(app);
-    console.log("✅ Routes registered successfully");
+    
+    // Status endpoint
+    app.get("/status", (_, res) => {
+      res.send("Server is running");
+    });
 
     // Serve static files
     app.use(express.static(clientBuildPath));
@@ -65,6 +75,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error("🚨 Critical error during server setup:");
     if (error instanceof Error) {
       console.error("Error message:", error.message);
+      console.error("Stack trace:", error.stack);
     }
     process.exit(1);
   }
