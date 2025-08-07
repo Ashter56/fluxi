@@ -11,7 +11,7 @@ import {
 } from  "../shared/schema";
 import { setupAuth } from "./auth";
 
-// FIXED: Safe WebSocket implementation
+// Safe WebSocket implementation
 const broadcastMessage = (event: string, data: any) => {
   console.log(`[WebSocket] Broadcast: ${event}`, data);
 };
@@ -28,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   console.log("🛣️ Setting up API routes...");
   
-  // FIXED: Route patterns with explicit parameter names
+  // Users endpoints
   app.get("/api/users/:userId", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
@@ -97,7 +97,6 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json({ count });
   });
   
-  // FIXED: Changed to :taskId
   app.get("/api/tasks/:taskId", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
@@ -153,7 +152,6 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // FIXED: Changed to :taskId
   app.patch("/api/tasks/:taskId", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -208,7 +206,6 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // FIXED: Changed to :taskId
   app.delete("/api/tasks/:taskId", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -238,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Comments endpoints - FIXED: Changed to :taskId
+  // Comments endpoints
   app.get("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
@@ -249,7 +246,6 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(comments);
   });
   
-  // FIXED: Changed to :taskId
   app.post("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -288,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Likes endpoints - FIXED: Changed to :taskId
+  // Likes endpoints
   app.post("/api/tasks/:taskId/like", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
