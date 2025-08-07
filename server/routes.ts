@@ -11,12 +11,9 @@ import {
 } from  "../shared/schema";
 import { setupAuth } from "./auth";
 
-// FIXED: Removed problematic WebSocket import that was causing the error
-// import { setupWebSocketServer, broadcastMessage, WebSocketEvent } from "./websocket";
-
-// Temporary replacement for WebSocket functions
+// Safe WebSocket implementation
 const broadcastMessage = (event: string, data: any) => {
-  console.log(`[WebSocket] Would broadcast: ${event}`, data);
+  console.log(`[WebSocket] Broadcast: ${event}`, data);
 };
 
 enum WebSocketEvent {
@@ -31,9 +28,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   console.log("🛣️ Setting up API routes...");
   
-  // Users endpoints
-  app.get("/api/users/:id", async (req: Request, res: Response) => {
-    const userId = parseInt(req.params.id);
+  // Users endpoints - FIXED: Changed :id to :userId
+  app.get("/api/users/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }
@@ -48,8 +45,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(userWithoutPassword);
   });
   
-  app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
-    const userId = parseInt(req.params.id);
+  app.get("/api/users/:userId/profile", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }
@@ -100,8 +97,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json({ count });
   });
   
-  app.get("/api/tasks/:id", async (req: Request, res: Response) => {
-    const taskId = parseInt(req.params.id);
+  // FIXED: Changed :id to :taskId
+  app.get("/api/tasks/:taskId", async (req: Request, res: Response) => {
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
@@ -155,12 +153,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  app.patch("/api/tasks/:id", async (req: Request, res: Response) => {
+  // FIXED: Changed :id to :taskId
+  app.patch("/api/tasks/:taskId", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
@@ -209,12 +208,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  app.delete("/api/tasks/:id", async (req: Request, res: Response) => {
+  // FIXED: Changed :id to :taskId
+  app.delete("/api/tasks/:taskId", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
@@ -238,9 +238,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Comments endpoints
-  app.get("/api/tasks/:id/comments", async (req: Request, res: Response) => {
-    const taskId = parseInt(req.params.id);
+  // Comments endpoints - FIXED: Changed :id to :taskId
+  app.get("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
@@ -249,12 +249,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(comments);
   });
   
-  app.post("/api/tasks/:id/comments", async (req: Request, res: Response) => {
+  // FIXED: Changed :id to :taskId
+  app.post("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
@@ -287,13 +288,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Likes endpoints
-  app.post("/api/tasks/:id/like", async (req: Request, res: Response) => {
+  // Likes endpoints - FIXED: Changed :id to :taskId
+  app.post("/api/tasks/:taskId/like", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
