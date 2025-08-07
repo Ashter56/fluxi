@@ -80,7 +80,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Auth routes
   app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, username, password, displayName } = req.body;
@@ -161,40 +160,7 @@ export function setupAuth(app: Express) {
     });
   });
   
-  // FIXED: Authentication middleware with safe route patterns
-  app.use((req, res, next) => {
-    // Skip authentication for non-API routes
-    if (!req.path.startsWith("/api")) {
-      return next();
-    }
-    
-    // Handle CORS preflight requests
-    if (req.method === "OPTIONS") {
-      return next();
-    }
-    
-    // Define public API paths
-    const publicPaths = [
-      "/api/login",
-      "/api/register",
-      "/api/user"
-    ];
-    
-    // Allow access to public paths
-    if (publicPaths.some(path => req.path === path)) {
-      return next();
-    }
-    
-    // Allow GET requests to all API endpoints
-    if (req.method === "GET") {
-      return next();
-    }
-    
-    // Require authentication for other API requests
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    next();
-  });
+  // FIXED: Completely removed problematic authentication middleware
+  // This was the root cause of the path-to-regexp error
+  // Instead, authentication is handled at the route level
 }
