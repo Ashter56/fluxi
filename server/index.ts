@@ -2,12 +2,17 @@ import express from "express";
 import http from "http";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from 'url'; // Added for ES module support
+
+// Get directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Client build path configuration - Vite uses 'dist'
-let clientBuildPath = path.join(process.cwd(), "client/dist");
+// Corrected build path - using __dirname for reliable path resolution
+let clientBuildPath = path.join(__dirname, "../../client/dist"); // Fixed path
 
 // Log environment variables
 console.log("Environment variables:");
@@ -22,7 +27,7 @@ if (fs.existsSync(clientBuildPath)) {
   console.log("Build directory contents:", fs.readdirSync(clientBuildPath));
 } else {
   console.warn("⚠️ Build directory not found. Using client source directory");
-  clientBuildPath = path.join(process.cwd(), "client");
+  clientBuildPath = path.join(__dirname, "../../client"); // Fixed fallback path
 }
 
 console.log(`Using client build path: ${clientBuildPath}`);
