@@ -6,7 +6,7 @@ import fs from "fs";
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Client build path configuration
+// Client build path configuration - Vite uses 'dist'
 let clientBuildPath = path.join(process.cwd(), "client/dist");
 
 // Log environment variables
@@ -19,6 +19,7 @@ console.log("RENDER:", process.env.RENDER);
 console.log("Checking build directory:", clientBuildPath);
 if (fs.existsSync(clientBuildPath)) {
   console.log("✅ Build directory exists");
+  console.log("Build directory contents:", fs.readdirSync(clientBuildPath));
 } else {
   console.warn("⚠️ Build directory not found. Using client source directory");
   clientBuildPath = path.join(process.cwd(), "client");
@@ -29,28 +30,27 @@ console.log(`Using client build path: ${clientBuildPath}`);
 // Verify index.html exists
 const indexPath = path.join(clientBuildPath, "index.html");
 console.log("Checking index.html at:", indexPath);
+
 if (fs.existsSync(indexPath)) {
   console.log("✅ index.html found");
 } else {
   console.error("❌ index.html not found! Directory contents:");
   console.log(fs.readdirSync(clientBuildPath));
+  
+  // Create a temporary index.html for debugging
+  fs.writeFileSync(indexPath, "<h1>Fluxi App Placeholder</h1>");
+  console.warn("⚠️ Created temporary index.html");
 }
 
-// Serve static files
+// Serve static files from the build directory
 app.use(express.static(clientBuildPath));
-
-// Add request logging
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
 
 // Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "Server is working!" });
 });
 
-// Handle SPA routing
+// Handle SPA routing - must be last
 app.get("*", (req, res) => {
   console.log(`Serving index.html for: ${req.path}`);
   res.sendFile(indexPath);
