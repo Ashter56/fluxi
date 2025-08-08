@@ -1,3 +1,6 @@
+console.log("Vite configuration loaded");
+console.log("Current directory:", __dirname);
+console.log("Environment:", process.env.NODE_ENV);
 import path from 'path';
 import { defineConfig, mergeConfig } from 'vite';
 import { fileURLToPath } from 'url';
