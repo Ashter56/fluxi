@@ -2,7 +2,7 @@ import express from "express";
 import http from "http";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from 'url'; // Added for ES module support
+import { fileURLToPath } from 'url';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -11,23 +11,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Corrected build path - using __dirname for reliable path resolution
-let clientBuildPath = path.join(__dirname, "../../client/dist"); // Fixed path
+// Corrected build path - using Render's project root
+const projectRoot = path.join(__dirname, "../..");  // Go up to project root
+let clientBuildPath = path.join(projectRoot, "client/dist");  // Fixed path
 
 // Log environment variables
 console.log("Environment variables:");
 console.log("PORT:", process.env.PORT);
 console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("RENDER:", process.env.RENDER);
+console.log("Project root:", projectRoot);  // Added for debugging
 
 // Verify if build directory exists
 console.log("Checking build directory:", clientBuildPath);
 if (fs.existsSync(clientBuildPath)) {
   console.log("✅ Build directory exists");
-  console.log("Build directory contents:", fs.readdirSync(clientBuildPath));
 } else {
   console.warn("⚠️ Build directory not found. Using client source directory");
-  clientBuildPath = path.join(__dirname, "../../client"); // Fixed fallback path
+  clientBuildPath = path.join(projectRoot, "client");  // Fixed fallback path
 }
 
 console.log(`Using client build path: ${clientBuildPath}`);
@@ -39,12 +40,16 @@ console.log("Checking index.html at:", indexPath);
 if (fs.existsSync(indexPath)) {
   console.log("✅ index.html found");
 } else {
-  console.error("❌ index.html not found! Directory contents:");
-  console.log(fs.readdirSync(clientBuildPath));
+  console.error("❌ index.html not found! Attempting to create temporary file...");
   
   // Create a temporary index.html for debugging
-  fs.writeFileSync(indexPath, "<h1>Fluxi App Placeholder</h1>");
-  console.warn("⚠️ Created temporary index.html");
+  try {
+    fs.writeFileSync(indexPath, "<h1>Fluxi App Placeholder</h1>");
+    console.warn("⚠️ Created temporary index.html");
+  } catch (error) {
+    console.error("❌ Failed to create index.html:", error);
+    console.log("Current directory contents:", fs.readdirSync(clientBuildPath));
+  }
 }
 
 // Serve static files from the build directory
