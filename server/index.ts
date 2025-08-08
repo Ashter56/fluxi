@@ -11,6 +11,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+
 // Corrected paths based on Render's actual structure
 const projectRoot = path.join(__dirname, "../..");
 const clientBuildPath = path.join(projectRoot, "src/client/dist");
@@ -52,6 +61,20 @@ if (!fs.existsSync(indexPath)) {
     </html>
   `);
 }
+
+// Test route
+app.get("/api/test", (req, res) => {
+  res.json({ message: "Server is working!" });
+});
+
+// Registration endpoint
+app.post("/api/register", (req, res) => {
+  console.log("Registration attempt:", req.body);
+  res.json({ 
+    success: true, 
+    message: "Registration successful (placeholder)" 
+  });
+});
 
 // Minimal static file serving
 app.use((req, res, next) => {
