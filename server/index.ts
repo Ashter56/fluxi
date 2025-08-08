@@ -11,56 +11,81 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Corrected build path - using Render's project root
-const projectRoot = path.join(__dirname, "../..");  // Go up to project root
-let clientBuildPath = path.join(projectRoot, "client/dist");  // Fixed path
+// Corrected paths based on Render's actual structure
+const projectRoot = path.join(__dirname, "../..");
+const clientBuildPath = path.join(projectRoot, "src/client/dist");
+const clientSourcePath = path.join(projectRoot, "src/client");
+
+// Determine which path to use
+let finalClientPath = clientBuildPath;
 
 // Log environment variables
 console.log("Environment variables:");
 console.log("PORT:", process.env.PORT);
 console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("RENDER:", process.env.RENDER);
-console.log("Project root:", projectRoot);  // Added for debugging
+console.log("Project root:", projectRoot);
 
-// Verify if build directory exists
+// Check if build directory exists
 console.log("Checking build directory:", clientBuildPath);
 if (fs.existsSync(clientBuildPath)) {
   console.log("✅ Build directory exists");
-} else {
+  finalClientPath = clientBuildPath;
+} 
+// Fallback to source directory
+else if (fs.existsSync(clientSourcePath)) {
   console.warn("⚠️ Build directory not found. Using client source directory");
-  clientBuildPath = path.join(projectRoot, "client");  // Fixed fallback path
+  finalClientPath = clientSourcePath;
+} 
+// Last resort: use process root
+else {
+  console.error("❌ Client directory not found! Using project root as fallback");
+  finalClientPath = projectRoot;
 }
 
-console.log(`Using client build path: ${clientBuildPath}`);
+console.log(`Using client path: ${finalClientPath}`);
 
 // Verify index.html exists
-const indexPath = path.join(clientBuildPath, "index.html");
+const indexPath = path.join(finalClientPath, "index.html");
 console.log("Checking index.html at:", indexPath);
 
 if (fs.existsSync(indexPath)) {
   console.log("✅ index.html found");
 } else {
-  console.error("❌ index.html not found! Attempting to create temporary file...");
+  console.error("❌ index.html not found! Creating temporary file...");
   
-  // Create a temporary index.html for debugging
-  try {
-    fs.writeFileSync(indexPath, "<h1>Fluxi App Placeholder</h1>");
-    console.warn("⚠️ Created temporary index.html");
-  } catch (error) {
-    console.error("❌ Failed to create index.html:", error);
-    console.log("Current directory contents:", fs.readdirSync(clientBuildPath));
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(finalClientPath)) {
+    fs.mkdirSync(finalClientPath, { recursive: true });
   }
+  
+  // Create a temporary index.html
+  fs.writeFileSync(indexPath, `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Fluxi App</title>
+      <style>body {font-family: sans-serif; padding: 2rem;}</style>
+    </head>
+    <body>
+      <h1>Fluxi App Placeholder</h1>
+      <p>Server is running but client files not found.</p>
+      <p>Path: ${finalClientPath}</p>
+    </body>
+    </html>
+  `);
+  console.warn("⚠️ Created temporary index.html");
 }
 
-// Serve static files from the build directory
-app.use(express.static(clientBuildPath));
+// Serve static files
+app.use(express.static(finalClientPath));
 
 // Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "Server is working!" });
 });
 
-// Handle SPA routing - must be last
+// Handle SPA routing
 app.get("*", (req, res) => {
   console.log(`Serving index.html for: ${req.path}`);
   res.sendFile(indexPath);
