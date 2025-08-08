@@ -37,7 +37,7 @@ else if (fs.existsSync(clientSourcePath)) {
   console.warn("⚠️ Build directory not found. Using client source directory");
   finalClientPath = clientSourcePath;
 } 
-// Last resort: use process root
+// Last resort: use project root
 else {
   console.error("❌ Client directory not found! Using project root as fallback");
   finalClientPath = projectRoot;
@@ -80,19 +80,21 @@ if (fs.existsSync(indexPath)) {
 // Serve static files
 app.use(express.static(finalClientPath));
 
-// Test route
+// 1. TEST ROUTE - Keep this simple route
 app.get("/api/test", (req, res) => {
   res.json({ message: "Server is working!" });
 });
 
-// Handle SPA routing
-app.get("*", (req, res) => {
-  console.log(`Serving index.html for: ${req.path}`);
-  res.sendFile(indexPath);
-});
+// 2. TEMPORARILY REMOVE SPA ROUTING - Comment out the catch-all route
+// app.get("*", (req, res) => {
+//   console.log(`Serving index.html for: ${req.path}`);
+//   res.sendFile(indexPath);
+// });
 
 // Start server
 const server = http.createServer(app);
 server.listen(port, "0.0.0.0", () => {
   console.log(`✅ Server started on port ${port}`);
 });
+
+console.log("Server setup complete");
