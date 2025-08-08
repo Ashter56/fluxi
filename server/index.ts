@@ -80,16 +80,28 @@ if (fs.existsSync(indexPath)) {
 // Serve static files
 app.use(express.static(finalClientPath));
 
-// 1. TEST ROUTE - Keep this simple route
+// Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "Server is working!" });
 });
 
-// 2. TEMPORARILY REMOVE SPA ROUTING - Comment out the catch-all route
-// app.get("*", (req, res) => {
-//   console.log(`Serving index.html for: ${req.path}`);
-//   res.sendFile(indexPath);
-// });
+// Enhanced SPA routing with error handling
+app.get("*", (req, res, next) => {
+  console.log(`Serving index.html for: ${req.path}`);
+  
+  // Check if file exists before sending
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error("Error sending index.html:", err);
+        res.status(500).send("Internal server error");
+      }
+    });
+  } else {
+    console.error("index.html not found at path:", indexPath);
+    res.status(404).send("Page not found");
+  }
+});
 
 // Start server
 const server = http.createServer(app);
