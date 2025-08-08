@@ -19,41 +19,18 @@ const clientSourcePath = path.join(projectRoot, "src/client");
 // Determine which path to use
 let finalClientPath = clientBuildPath;
 
-// Log environment variables
-console.log("Environment variables:");
-console.log("PORT:", process.env.PORT);
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("RENDER:", process.env.RENDER);
-console.log("Project root:", projectRoot);
-
 // Check if build directory exists
-console.log("Checking build directory:", clientBuildPath);
 if (fs.existsSync(clientBuildPath)) {
-  console.log("✅ Build directory exists");
   finalClientPath = clientBuildPath;
-} 
-// Fallback to source directory
-else if (fs.existsSync(clientSourcePath)) {
-  console.warn("⚠️ Build directory not found. Using client source directory");
+} else if (fs.existsSync(clientSourcePath)) {
   finalClientPath = clientSourcePath;
-} 
-// Last resort: use project root
-else {
-  console.error("❌ Client directory not found! Using project root as fallback");
+} else {
   finalClientPath = projectRoot;
 }
 
-console.log(`Using client path: ${finalClientPath}`);
-
 // Verify index.html exists
 const indexPath = path.join(finalClientPath, "index.html");
-console.log("Checking index.html at:", indexPath);
-
-if (fs.existsSync(indexPath)) {
-  console.log("✅ index.html found");
-} else {
-  console.error("❌ index.html not found! Creating temporary file...");
-  
+if (!fs.existsSync(indexPath)) {
   // Create directory if it doesn't exist
   if (!fs.existsSync(finalClientPath)) {
     fs.mkdirSync(finalClientPath, { recursive: true });
@@ -74,32 +51,18 @@ if (fs.existsSync(indexPath)) {
     </body>
     </html>
   `);
-  console.warn("⚠️ Created temporary index.html");
 }
 
-// Serve static files
-app.use(express.static(finalClientPath));
-
-// Test route
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Server is working!" });
-});
-
-// Enhanced SPA routing with error handling
-app.get("*", (req, res, next) => {
-  console.log(`Serving index.html for: ${req.path}`);
+// Minimal static file serving
+app.use((req, res, next) => {
+  // Serve static files manually
+  const filePath = path.join(finalClientPath, req.path);
   
-  // Check if file exists before sending
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        console.error("Error sending index.html:", err);
-        res.status(500).send("Internal server error");
-      }
-    });
+  if (fs.existsSync(filePath) && !fs.lstatSync(filePath).isDirectory()) {
+    res.sendFile(filePath);
   } else {
-    console.error("index.html not found at path:", indexPath);
-    res.status(404).send("Page not found");
+    // Fallback to index.html for SPA routing
+    res.sendFile(indexPath);
   }
 });
 
@@ -108,5 +71,3 @@ const server = http.createServer(app);
 server.listen(port, "0.0.0.0", () => {
   console.log(`✅ Server started on port ${port}`);
 });
-
-console.log("Server setup complete");
