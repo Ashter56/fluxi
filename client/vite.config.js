@@ -14,8 +14,8 @@ const baseConfig = defineConfig({
   root: __dirname,
   plugins: [react()],
   
-  // Key fix: Set base path correctly for production
-  base: '/',
+  // Set base path correctly for production
+  base: './', // Changed from '/' to './'
   
   resolve: {
     alias: {
@@ -29,7 +29,7 @@ const baseConfig = defineConfig({
   server: process.env.NODE_ENV === 'production' ? undefined : {
     proxy: {
       '/api': {
-        target: 'https://fluxi-epb6.onrender.com',
+        target: 'http://localhost:5000', // Changed to localhost for development
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       }
