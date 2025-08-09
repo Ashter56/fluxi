@@ -50,8 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginData) => {
       try {
         console.log("Logging in with:", credentials.username);
-        // Use a direct fetch instead of our apiRequest to avoid issues
-        const res = await fetch("/api/login", {
+        // Use absolute URL for production
+        const res = await fetch("https://fluxi-epb6.onrender.com/api/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -103,7 +103,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", data);
+      // Use absolute URL for production
+      const res = await fetch("https://fluxi-epb6.onrender.com/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Error ${res.status}: ${errorText || res.statusText}`);
+      }
+      
       return await res.json();
     },
     onSuccess: (user: User) => {
@@ -128,8 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async () => {
       try {
         console.log("Logging out user");
-        // Use direct fetch like login to ensure proper session handling
-        const res = await fetch("/api/logout", {
+        // Use absolute URL for production
+        const res = await fetch("https://fluxi-epb6.onrender.com/api/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
