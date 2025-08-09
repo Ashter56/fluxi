@@ -77,7 +77,15 @@ app.post("/api/register", (req, res) => {
     message: "Registration successful (placeholder)" 
   });
 });
-
+// Login endpoint
+app.post("/api/login", (req, res) => {
+  console.log("Login attempt:", req.body);
+  res.json({ 
+    success: true, 
+    message: "Login successful (placeholder)",
+    user: { id: 1, username: req.body.username }
+  });
+});
 // Minimal static file serving
 app.use((req, res, next) => {
   // Serve static files manually
