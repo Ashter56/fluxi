@@ -3,6 +3,7 @@ import passport from 'passport';
 import session from 'express-session';
 import memorystore from 'memorystore';
 import { Strategy as LocalStrategy } from 'passport-local';
+import { storage } from './storage';
 import { User } from '../shared/schema';
 
 const MemoryStore = memorystore(session);
@@ -19,8 +20,8 @@ export function configureAuth(app: express.Application) {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 // 24 hours
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
     }
   }));
 
@@ -28,16 +29,25 @@ export function configureAuth(app: express.Application) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Mock user database (replace with real DB)
-  const users: User[] = [
-    { id: 1, username: 'test', email: 'test@example.com', displayName: 'Test User' }
-  ];
-
+  // Passport configuration
   passport.use(new LocalStrategy(
-    (username, password, done) => {
-      const user = users.find(u => u.username === username);
-      if (!user) return done(null, false, { message: 'Invalid credentials' });
-      return done(null, user);
+    async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        
+        if (!user) {
+          return done(null, false, { message: 'Invalid credentials' });
+        }
+        
+        // In a real app, use bcrypt to compare hashed passwords
+        if (user.password !== password) {
+          return done(null, false, { message: 'Invalid credentials' });
+        }
+        
+        return done(null, user);
+      } catch (error) {
+        return done(error);
+      }
     }
   ));
 
@@ -45,18 +55,29 @@ export function configureAuth(app: express.Application) {
     done(null, user.id);
   });
 
-  passport.deserializeUser((id: number, done) => {
-    const user = users.find(u => u.id === id);
-    done(null, user || null);
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
   });
 
   // Authentication endpoints
-  app.post('/api/login', passport.authenticate('local'), (req, res) => {
-    res.json({ 
-      success: true, 
-      message: 'Login successful',
-      user: req.user
-    });
+  app.post('/api/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ message: info.message });
+      
+      req.logIn(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        
+        // Remove password before sending user data
+        const { password, ...userWithoutPassword } = user;
+        return res.json(userWithoutPassword);
+      });
+    })(req, res, next);
   });
 
   app.post('/api/logout', (req, res) => {
@@ -66,6 +87,10 @@ export function configureAuth(app: express.Application) {
   });
 
   app.get('/api/user', (req, res) => {
-    res.json(req.user || null);
+    if (req.isAuthenticated() && req.user) {
+      const { password, ...userWithoutPassword } = req.user as User;
+      return res.json(userWithoutPassword);
+    }
+    res.status(401).json({ message: 'Not authenticated' });
   });
 }
