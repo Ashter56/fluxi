@@ -9,12 +9,12 @@ import {
   taskStatus,
   type TaskStatus
 } from  "../shared/schema";
-import { setupAuth } from "./auth";
+import { configureAuth } from "./auth";
 import { broadcastMessage, WebSocketEvent } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<void> {
   console.log("🛡️ Setting up authentication...");
-  setupAuth(app);
+  configureAuth(app);
   
   console.log("🛣️ Setting up API routes...");
   
