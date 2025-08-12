@@ -5,8 +5,8 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 import type { User } from "../../../shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@tanstack/react-query"; // Added import
 
 type AuthContextType = {
   user: User | null;
@@ -40,34 +40,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<User | null, Error>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/user", { // Changed to relative URL
+          credentials: "include", // Added credentials
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) return null;
+          throw new Error("Failed to fetch user");
+        }
+        
+        return await res.json();
+      } catch (err) {
+        console.error("User query error:", err);
+        return null;
+      }
+    },
     retry: false,
     refetchInterval: false,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true // Changed to true for session validation
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       try {
         console.log("Logging in with:", credentials.username);
-        // Use absolute URL for production
-        const res = await fetch("https://fluxi-epb6.onrender.com/api/login", {
+        const res = await fetch("/api/login", { // Changed to relative URL
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(credentials),
-          credentials: "include",
+          credentials: "include", // Keep credentials
         });
         
         if (!res.ok) {
           const errorText = await res.text();
-          try {
-            const errorData = JSON.parse(errorText);
-            throw new Error(errorData.message || `Error ${res.status}: ${res.statusText}`);
-          } catch (e) {
-            throw new Error(`Error ${res.status}: ${errorText || res.statusText}`);
-          }
+          throw new Error(errorText || `Error ${res.status}: ${res.statusText}`);
         }
         
         const userData = await res.json();
@@ -85,11 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Login successful",
         description: `Welcome back, ${user.displayName}!`,
       });
-      // Invalidate any queries that might depend on auth status
       queryClient.invalidateQueries();
-      
-      // Force navigation to the home page
-      window.location.href = "/";
     },
     onError: (error: Error) => {
       console.error("Login mutation error:", error);
@@ -103,19 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      // Use absolute URL for production
-      const res = await fetch("https://fluxi-epb6.onrender.com/api/register", {
+      const res = await fetch("/api/register", { // Changed to relative URL
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-        credentials: "include",
+        credentials: "include", // Keep credentials
       });
       
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(`Error ${res.status}: ${errorText || res.statusText}`);
+        throw new Error(errorText || `Error ${res.status}: ${res.statusText}`);
       }
       
       return await res.json();
@@ -126,8 +131,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Registration successful",
         description: `Welcome to Fluxion, ${user.displayName}!`,
       });
-      // Force navigation to home page
-      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({
@@ -142,30 +145,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async () => {
       try {
         console.log("Logging out user");
-        // Use absolute URL for production
-        const res = await fetch("https://fluxi-epb6.onrender.com/api/logout", {
+        const res = await fetch("/api/logout", { // Changed to relative URL
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include",
+          credentials: "include", // Keep credentials
         });
         
         if (!res.ok) {
           const errorText = await res.text();
-          throw new Error(`Error ${res.status}: ${errorText || res.statusText}`);
+          throw new Error(errorText || `Error ${res.status}: ${res.statusText}`);
         }
-        
-        return await res.json();
       } catch (err) {
         console.error("Logout API error:", err);
         throw err;
       }
     },
     onSuccess: () => {
-      // Clear user data and navigate to login
       queryClient.setQueryData(["/api/user"], null);
-      window.location.href = "/auth"; // Force a full page reload to clear state
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
