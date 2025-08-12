@@ -4,14 +4,22 @@ import http from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
+import { registerRoutes } from './routes';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors());
 const port = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors({
+  origin: 'https://fluxi-epb6.onrender.com',
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Add request logging middleware
 app.use((req, res, next) => {
@@ -19,15 +27,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+// Configure routes
+registerRoutes(app);
 
-// Corrected paths based on Render's actual structure
+// Client paths
 const projectRoot = path.join(__dirname, "../..");
 const clientBuildPath = path.join(projectRoot, "src/client/dist");
 const clientSourcePath = path.join(projectRoot, "src/client");
-
-// Determine which path to use
 let finalClientPath = clientBuildPath;
 
 // Check if build directory exists
@@ -64,39 +70,12 @@ if (!fs.existsSync(indexPath)) {
   `);
 }
 
-// Test route
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Server is working!" });
-});
+// Serve static files
+app.use(express.static(finalClientPath));
 
-// Registration endpoint
-app.post("/api/register", (req, res) => {
-  console.log("Registration attempt:", req.body);
-  res.json({ 
-    success: true, 
-    message: "Registration successful (placeholder)" 
-  });
-});
-// Login endpoint
-app.post("/api/login", (req, res) => {
-  console.log("Login attempt:", req.body);
-  res.json({ 
-    success: true, 
-    message: "Login successful (placeholder)",
-    user: { id: 1, username: req.body.username }
-  });
-});
-// Minimal static file serving
-app.use((req, res, next) => {
-  // Serve static files manually
-  const filePath = path.join(finalClientPath, req.path);
-  
-  if (fs.existsSync(filePath) && !fs.lstatSync(filePath).isDirectory()) {
-    res.sendFile(filePath);
-  } else {
-    // Fallback to index.html for SPA routing
-    res.sendFile(indexPath);
-  }
+// SPA fallback
+app.get("*", (req, res) => {
+  res.sendFile(indexPath);
 });
 
 // Start server
