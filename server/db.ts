@@ -2,11 +2,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
 // Create connection pool with SSL configuration
-export const pool = new Pool({  // Add export here
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.PGSSL === 'true' ? { 
-    rejectUnauthorized: false 
-  } : false,
+  ssl: {
+    rejectUnauthorized: false // Always use this for Supabase
+  } // Remove PGSSL environment check
 });
 
 // Add connection event listeners for debugging
@@ -20,13 +20,4 @@ pool.on('error', (err) => {
 
 export const db = drizzle(pool);
 
-// Test connection immediately
-(async () => {
-  try {
-    console.log('Testing database connection...');
-    const result = await pool.query('SELECT NOW() as current_time');
-    console.log('✅ Database connection test successful:', result.rows[0].current_time);
-  } catch (error) {
-    console.error('❌ Database connection test failed:', error);
-  }
-})();
+// Remove the test connection code entirely
