@@ -4,7 +4,7 @@ import http from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
-import { registerRoutes } from './routes';
+import { registerRoutes } from './routes.ts';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
