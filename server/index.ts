@@ -5,6 +5,8 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import { registerRoutes } from './routes.ts';
+import { db } from './db'; // Add this import
+import { sql } from 'drizzle-orm'; // Add this import
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -78,8 +80,20 @@ app.get("*", (req, res) => {
   res.sendFile(indexPath);
 });
 
-// Start server
-const server = http.createServer(app);
-server.listen(port, "0.0.0.0", () => {
-  console.log(`✅ Server started on port ${port}`);
-});
+// Database connection test (NEW SECTION)
+(async () => {
+  try {
+    console.log("Testing database connection...");
+    const testResult = await db.execute(sql`SELECT 1 AS connection_test`);
+    console.log("✅ Database connection test successful:", testResult.rows[0]);
+    
+    // Start server after successful DB test
+    const server = http.createServer(app);
+    server.listen(port, "0.0.0.0", () => {
+      console.log(`✅ Server started on port ${port}`);
+    });
+  } catch (error) {
+    console.error("❌ Database connection test failed:", error);
+    process.exit(1); // Exit with error code
+  }
+})();
