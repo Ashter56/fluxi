@@ -50,12 +50,31 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
+    console.log("🛢️ Initializing DatabaseStorage...");
+    
+    // Log database connection details (without password)
+    if (process.env.DATABASE_URL) {
+      try {
+        const url = new URL(process.env.DATABASE_URL);
+        console.log(`🔗 Connecting to database at: ${url.hostname}`);
+      } catch (e) {
+        console.log("ℹ️ DATABASE_URL format unexpected");
+      }
+    } else {
+      console.log("⚠️ DATABASE_URL environment variable not set!");
+    }
+
     const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
       tableName: 'session'
     });
+
+    // Add connection test
+    pool.query('SELECT NOW() as db_time')
+      .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
+      .catch(err => console.error('❌ Database test failed:', err));
   }
 
   // User methods
