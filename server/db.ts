@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
 // Create connection pool with SSL configuration
-const pool = new Pool({
+export const pool = new Pool({  // Add export here
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.PGSSL === 'true' ? { 
     rejectUnauthorized: false 
