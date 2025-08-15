@@ -5,8 +5,8 @@
   "license": "MIT",
   "resolutions": {
     "zod": "3.24.2"
-}
-  "scripts": {,
+  },
+  "scripts": {
     "build:shared": "bun build shared/schema.ts --outdir server/shared --format esm",
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "vite build",
@@ -86,7 +86,6 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
-    
     "@tailwindcss/typography": "^0.5.15",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "4.17.21",
