@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";  // Changed to import *
 
 // Load environment variables
 dotenv.config({ path: ".env.production" });
