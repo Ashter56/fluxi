@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit";
-import * as dotenv from "dotenv";  // Changed to import *
+import * as dotenv from "dotenv";
 
 // Load environment variables
 dotenv.config({ path: ".env.production" });
@@ -21,4 +21,5 @@ export default defineConfig({
   },
   verbose: true,
   strict: true,
+  generateFor: "all", // Add this line to enable initial migration generation
 });
