@@ -5,8 +5,8 @@
   "license": "MIT",
   "resolutions": {
     "zod": "3.24.2"
-{,
-  "scripts": {
+}
+  "scripts": {,
     "build:shared": "bun build shared/schema.ts --outdir server/shared --format esm",
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "vite build",
@@ -15,8 +15,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push:pg",
     "migrate": "drizzle-kit migrate && bun run db:push"
-  }
-},
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
