@@ -21,5 +21,5 @@ export default defineConfig({
   },
   verbose: true,
   strict: true,
-  generateFor: "all", // Add this line to enable initial migration generation
+  generateFor: "all", // Add this line to enable migration generation
 });
