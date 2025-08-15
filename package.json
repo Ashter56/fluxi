@@ -13,8 +13,8 @@
     "start": "bun run migrate && bun server/index.ts",
     "build:client": "vite build",
     "check": "tsc",
-    "db:push": "drizzle-kit push:pg",
-    "migrate": "drizzle-kit generate:pg && drizzle-kit migrate && bun run db:push"
+    "db:push": "drizzle-kit push:pg", 
+    "migrate": "drizzle-kit generate && drizzle-kit migrate && bun run db:push"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
