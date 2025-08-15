@@ -14,6 +14,7 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false } // Add this line
   },
   migrations: {
     table: "migrations",
@@ -21,5 +22,5 @@ export default defineConfig({
   },
   verbose: true,
   strict: true,
-  generateFor: "all", // Add this line to enable migration generation
+  generateFor: "all",
 });
