@@ -13,11 +13,51 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 5000;
 
+// ========== UPDATED CORS CONFIGURATION ========== //
+const allowedOrigins = [
+  'https://fluxi-epb6.onrender.com',
+  'http://localhost:3000' // For local development
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin) || 
+        origin.endsWith('.onrender.com') || // Allow all Render subdomains
+        origin.includes('localhost')) {     // Allow localhost variants
+      return callback(null, true);
+    }
+    
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'Accept',
+    'Cookie',
+    'Set-Cookie'
+  ],
+  exposedHeaders: ['Set-Cookie', 'Cookie'],
+  maxAge: 86400
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
+
+// Add headers to every response
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  next();
+});
+// ========== END OF CORS UPDATE ========== //
+
 // Middleware
-app.use(cors({
-  origin: 'https://fluxi-epb6.onrender.com',
-  credentials: true
-}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
