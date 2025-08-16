@@ -67,7 +67,8 @@ export default function RegisterPage() {
         headers: { 
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(registerData)
+        body: JSON.stringify(registerData),
+        credentials: 'include' // ADDED THIS LINE - CRITICAL FOR SESSION COOKIES
       });
 
       // Check if response is JSON
