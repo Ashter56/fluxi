@@ -1,3 +1,6 @@
+import stabilizeApp from './lib/disable-hmr';
+stabilizeApp(); // Added to disable HMR/WebSocket in production
+
 import React from 'react';
 import { createRoot } from "react-dom/client";
 import App from "./App";
@@ -6,7 +9,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
-import { BrowserRouter } from 'react-router-dom'; // Add this
+import { BrowserRouter } from 'react-router-dom';
 
 // Wait for DOM to be fully ready
 document.addEventListener('DOMContentLoaded', () => {
