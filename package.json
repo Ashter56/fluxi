@@ -14,7 +14,7 @@
     "build:client": "vite build",
     "check": "tsc",
     "db:push": "drizzle-kit push:pg", 
-    "migrate": "PGSSLMODE=no-verify drizzle-kit generate && PGSSLMODE=no-verify drizzle-kit migrate && bun run db:push"
+    "migrate":  "PGSSLMODE=no-verify drizzle-kit generate && PGSSLMODE=no-verify drizzle-kit migrate:reset --force && bun run db:push"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
