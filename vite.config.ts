@@ -1,13 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import commonjs from '@vitejs/plugin-commonjs';
 
 export default defineConfig({
   root: path.resolve(__dirname, "client"),  // Point to client source
   plugins: [
     react(),
-    commonjs(),
+    // Removed commonjs plugin
   ],
   resolve: {
     alias: {
@@ -18,6 +17,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "client/dist"),  // Output to client/dist
     emptyOutDir: true,
+    commonjsOptions: {
+      transformMixedEsModules: true,  // Add this for CommonJS support
+    },
     rollupOptions: {
       output: {
         manualChunks: {
