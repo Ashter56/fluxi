@@ -1,17 +1,9 @@
 // This module forcibly disables Vite's HMR functionality
 export function disableHMR() {
   if (typeof window !== 'undefined') {
-    console.log('[Production] Disabling WebSocket and HMR completely');
+    console.log('[Production] Disabling HMR completely');
     
-    // Completely disable WebSocket in production
-    window.WebSocket = class BlockedWebSocket {
-      constructor() {
-        console.error('[Production] WebSocket is disabled in production');
-        throw new Error('WebSocket is disabled in production');
-      }
-    };
-
-    // Disable HMR
+    // Disable HMR via import.meta.hot
     if (import.meta.hot) {
       try {
         import.meta.hot.dispose(() => {});
@@ -21,12 +13,31 @@ export function disableHMR() {
         console.log('[Production] Could not disable HMR');
       }
     }
+    
+    // Block WebSocket connections safely without replacing the constructor
+    const originalWebSocket = window.WebSocket;
+    
+    window.WebSocket = function(...args) {
+      const url = args[0];
+      if (url && typeof url === 'string' && 
+          (url.includes('vite') || url.includes('hmr'))) {
+        console.log('[Production] Blocking WebSocket to:', url);
+        return {
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          send: () => {},
+          close: () => {},
+          readyState: 3 // CLOSED
+        };
+      }
+      return new originalWebSocket(...args);
+    };
   }
 }
 
 export default function stabilizeApp() {
   if (process.env.NODE_ENV === 'production') {
     disableHMR();
-    console.log('[Production] App stabilized by disabling HMR and WebSocket');
+    console.log('[Production] App stabilized by disabling HMR');
   }
 }
