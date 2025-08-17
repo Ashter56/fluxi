@@ -2,31 +2,30 @@
 (function() {
   // Only run in production environment
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    console.log("[Production] Disabling WebSocket connections");
-
-    // Block WebSocket initialization
-    window.WebSocket = function() {
-      throw new Error('WebSocket is disabled in production');
-    };
+    console.log("[Production] Blocking HMR WebSocket connections");
     
-    // Block any existing WebSocket instances
-    Object.defineProperty(window, 'WebSocket', {
-      value: function() {
-        throw new Error('WebSocket is disabled in production');
-      },
-      writable: false,
-      configurable: false
-    });
-
-    // Block HMR polling messages
-    const originalConsoleLog = console.log;
-    console.log = function(...args) {
-      if (args[0] && typeof args[0] === 'string' && 
-          (args[0].includes('server connection lost') || 
-           args[0].includes('Polling for restart'))) {
-        return;
+    // Save the original WebSocket implementation
+    const originalWebSocket = window.WebSocket;
+    
+    // Create a wrapper function for WebSocket
+    window.WebSocket = function(...args) {
+      const url = args[0];
+      
+      // Block only Vite/HMR-related WebSocket connections
+      if (url && typeof url === 'string' && 
+          (url.includes('vite') || url.includes('hmr'))) {
+        console.log("[Production] Blocked WebSocket to:", url);
+        return {
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          send: () => {},
+          close: () => {},
+          readyState: 3 // CLOSED
+        };
       }
-      return originalConsoleLog.apply(this, args);
+      
+      // Allow other WebSocket connections
+      return new originalWebSocket(...args);
     };
   }
 })();
