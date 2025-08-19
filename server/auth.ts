@@ -5,6 +5,8 @@ import memorystore from 'memorystore';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { storage } from './storage';
 import { User } from '../shared/schema';
+import { insertUserSchema } from '../shared/schema';
+import { z } from 'zod';
 
 const MemoryStore = memorystore(session);
 
@@ -92,5 +94,43 @@ export function configureAuth(app: express.Application) {
       return res.json(userWithoutPassword);
     }
     res.status(401).json({ message: 'Not authenticated' });
+  });
+
+  // ADD THIS NEW REGISTRATION ENDPOINT
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      // Validate request body
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+      
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+      
+      // Create user
+      const user = await storage.createUser(userData);
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      
+      // Automatically log in the user after registration
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          return res.status(500).json({ message: 'Registration successful but automatic login failed' });
+        }
+        return res.status(201).json(userWithoutPassword);
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to register user' });
+    }
   });
 }
