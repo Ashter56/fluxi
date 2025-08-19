@@ -1,6 +1,3 @@
-import stabilizeApp from './lib/disable-hmr';
-stabilizeApp(); // Added to disable HMR/WebSocket in production
-
 import React from 'react';
 import { createRoot } from "react-dom/client";
 import App from "./App";
@@ -13,6 +10,15 @@ import { BrowserRouter } from 'react-router-dom';
 
 // Wait for DOM to be fully ready
 document.addEventListener('DOMContentLoaded', () => {
+  // ===== ADD HMR DISABLING HERE ===== //
+  if (import.meta.env.PROD) {
+    import('./lib/disable-hmr').then(module => {
+      module.default();
+    }).catch(err => {
+      console.error('Failed to load disable-hmr:', err);
+    });
+  }
+
   // [Keep all your existing debug code unchanged]
   // Remove Replit banner if it exists
   const replitBanner = document.querySelector('.replit-ui-theme-root');
@@ -122,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
               <Toaster />
-              {/* Add BrowserRouter here wrapping App */}
               <BrowserRouter>
                 <App />
               </BrowserRouter>
