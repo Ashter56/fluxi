@@ -94,7 +94,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    // Map JavaScript object properties to database column names
+    const userToInsert = {
+      username: insertUser.username,
+      email: insertUser.email,
+      display_name: insertUser.displayName, // Map to database column name
+      password: insertUser.password,
+      avatar_url: insertUser.avatarUrl || null // Map to database column name
+    };
+
+    const [user] = await db.insert(users).values(userToInsert).returning();
     return user;
   }
   
