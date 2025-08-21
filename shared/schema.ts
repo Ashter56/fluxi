@@ -18,8 +18,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   username: true,
   password: true,
-  displayName: true,
-  avatarUrl: true,
+  displayName: true,  // Changed from display_name to displayName
+  avatarUrl: true,    // Changed from avatar_url to avatarUrl
   bio: true,
 });
 
@@ -96,13 +96,13 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
 }));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
-  user: one(users, { fields: [comments.userId], references: [users.id] }),
-  task: one(tasks, { fields: [comments.taskId], references: [tasks.id] }),
+  user: one(users, { fields: [comments.userId], references, [users.id] }),
+  task: one(tasks, { fields: [comments.taskId], references, [tasks.id] }),
 }));
 
 export const likesRelations = relations(likes, ({ one }) => ({
-  user: one(users, { fields: [likes.userId], references: [users.id] }),
-  task: one(tasks, { fields: [likes.taskId], references: [tasks.id] }),
+  user: one(users, { fields: [likes.userId], references, [users.id] }),
+  task: one(tasks, { fields: [likes.taskId], references, [tasks.id] }),
 }));
 
 // Response types for extended data
