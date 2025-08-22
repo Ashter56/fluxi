@@ -205,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     return comment;
   }
   
-  async deleteComment(id: number): край
+  async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
       .delete(comments)
       .where(eq(comments.id, id))
