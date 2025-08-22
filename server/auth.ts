@@ -5,7 +5,6 @@ import memorystore from 'memorystore';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { storage } from './storage';
 import { User } from '../shared/schema';
-import { insertUserSchema } from '../shared/schema';
 import { z } from 'zod';
 
 const MemoryStore = memorystore(session);
@@ -96,16 +95,35 @@ export function configureAuth(app: express.Application) {
     res.status(401).json({ message: 'Not authenticated' });
   });
 
-  // Registration endpoint with enhanced error logging
+  // Registration endpoint with manual validation
   app.post('/api/auth/register', async (req, res) => {
     console.log('Registration request received at:', new Date().toISOString());
     
     try {
       console.log('Request body:', req.body);
       
-      // Validate request body
-      const userData = insertUserSchema.parse(req.body);
-      console.log('Validated user data:', userData);
+      // MANUAL VALIDATION - Temporary fix
+      if (!req.body.username || !req.body.email || !req.body.password || !req.body.displayName) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Manual validation of email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(req.body.email)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+      }
+      
+      // Create user data object with proper mapping
+      const userData = {
+        username: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+        displayName: req.body.displayName,
+        avatarUrl: req.body.avatarUrl || null,
+        bio: req.body.bio || null
+      };
+      
+      console.log('Processed user data:', userData);
       
       // Check if user already exists
       console.log('Checking if username exists:', userData.username);
@@ -146,9 +164,6 @@ export function configureAuth(app: express.Application) {
         name: error instanceof Error ? error.name : 'No error name',
         stack: error instanceof Error ? error.stack : 'No stack trace'
       });
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
       res.status(500).json({ message: 'Failed to register user' });
     }
   });
