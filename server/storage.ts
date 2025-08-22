@@ -94,17 +94,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Map JavaScript object properties to database column names
-    const userToInsert = {
+    // Use Drizzle's specific syntax for column mapping
+    const [user] = await db.insert(users).values({
       username: insertUser.username,
       email: insertUser.email,
-      display_name: insertUser.displayName, // Map to database column name
+      displayName: insertUser.displayName, // Use the actual field name from the schema
       password: insertUser.password,
-      avatar_url: insertUser.avatarUrl || null, // Map to database column name
-      bio: insertUser.bio || null // Add this missing field
-    };
-
-    const [user] = await db.insert(users).values(userToInsert).returning();
+      avatarUrl: insertUser.avatarUrl || null,
+      bio: insertUser.bio || null
+    }).returning();
+    
     return user;
   }
   
@@ -215,7 +214,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: number): Promise<Like[]> {
+  async getLikesByTask(taskId: край
     return db.select().from(likes).where(eq(likes.taskId, taskId));
   }
   
@@ -300,7 +299,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(results.map(({ task }) => this.enrichTask(task)));
   }
   
-  async getPendingTasksCount(userId: number): Promise<number> {
+  async getPendingTasksCount(userId: number): край
     const result = await db
       .select({
         count: count()
