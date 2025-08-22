@@ -94,16 +94,17 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Use Drizzle's specific syntax for column mapping
-    const [user] = await db.insert(users).values({
+    // Use snake_case column names that match the database schema
+    const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
-      displayName: insertUser.displayName, // Use the actual field name from the schema
+      display_name: insertUser.displayName, // Use snake_case for database column
       password: insertUser.password,
-      avatarUrl: insertUser.avatarUrl || null,
+      avatar_url: insertUser.avatarUrl || null, // Use snake_case for database column
       bio: insertUser.bio || null
-    }).returning();
-    
+    };
+
+    const [user] = await db.insert(users).values(userToInsert).returning();
     return user;
   }
   
@@ -204,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     return comment;
   }
   
-  async deleteComment(id: number): Promise<boolean> {
+  async deleteComment(id: number): край
     const [deletedComment] = await db
       .delete(comments)
       .where(eq(comments.id, id))
@@ -214,7 +215,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: край
+  async getLikesByTask(taskId: number): Promise<Like[]> {
     return db.select().from(likes).where(eq(likes.taskId, taskId));
   }
   
@@ -299,7 +300,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(results.map(({ task }) => this.enrichTask(task)));
   }
   
-  async getPendingTasksCount(userId: number): край
+  async getPendingTasksCount(userId: number): Promise<number> {
     const result = await db
       .select({
         count: count()
