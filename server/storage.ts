@@ -100,7 +100,8 @@ export class DatabaseStorage implements IStorage {
       email: insertUser.email,
       display_name: insertUser.displayName, // Map to database column name
       password: insertUser.password,
-      avatar_url: insertUser.avatarUrl || null // Map to database column name
+      avatar_url: insertUser.avatarUrl || null, // Map to database column name
+      bio: insertUser.bio || null // Add this missing field
     };
 
     const [user] = await db.insert(users).values(userToInsert).returning();
