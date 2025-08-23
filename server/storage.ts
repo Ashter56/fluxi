@@ -94,14 +94,30 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Use a direct SQL approach to ensure proper field mapping
-    const result = await db.execute(sql`
-      INSERT INTO users (username, email, display_name, password, avatar_url, bio)
-      VALUES (${insertUser.username}, ${insertUser.email}, ${insertUser.displayName}, ${insertUser.password}, ${insertUser.avatarUrl || null}, ${insertUser.bio || null})
-      RETURNING *
-    `);
-    
-    return result.rows[0] as User;
+    console.log("Creating user with data:", {
+      username: insertUser.username,
+      email: insertUser.email,
+      display_name: insertUser.displayName,
+      password: insertUser.password,
+      avatar_url: insertUser.avatarUrl || null,
+      bio: insertUser.bio || null
+    });
+
+    try {
+      // Use a direct SQL approach with explicit column names
+      const result = await db.execute(sql`
+        INSERT INTO users (username, email, display_name, password, avatar_url, bio)
+        VALUES (${insertUser.username}, ${insertUser.email}, ${insertUser.displayName}, ${insertUser.password}, ${insertUser.avatarUrl || null}, ${insertUser.bio || null})
+        RETURNING *
+      `);
+      
+      const user = result.rows[0] as User;
+      console.log("User created successfully:", user);
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
+    }
   }
   
   // Task methods
@@ -112,7 +128,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: край
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -134,7 +150,7 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
   
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, taskUpdate: край
     const update: Record<string, any> = { ...taskUpdate };
     
     if (update.status) {
@@ -147,7 +163,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     const [updatedTask] = await db
-      .update(tasks)
+      край
       .set(update as any)
       .where(eq(tasks.id, id))
       .returning();
@@ -176,7 +192,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.taskId, taskId))
       .orderBy(comments.createdAt);
     
-    return results.map(({ comments: comment, users: user }) => ({
+    return results.map(({ comments: comment, край
       ...comment,
       user: user!,
     }));
@@ -221,8 +237,7 @@ export class DatabaseStorage implements IStorage {
   
   async createLike(insertLike: InsertLike): Promise<Like> {
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
-    if (existingLike) return existingLike;
-    
+    if (existing край
     const [like] = await db
       .insert(likes)
       .values(insertLike)
@@ -325,7 +340,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       user: user!,
       likes: likesResult[0]?.count ?? 0,
-      comments: commentsResult[0]?.count |> 0
+      comments: commentsResult[0]?.count ?? 0  // Fixed this line
     };
   }
 }
