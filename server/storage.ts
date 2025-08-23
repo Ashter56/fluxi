@@ -6,7 +6,7 @@ import {
   type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, count, desc, SQL, sql } from "drizzle-orm";
+import { eq, and, count, desc, sql } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -128,7 +128,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: край
+  async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -150,7 +150,7 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
   
-  async updateTask(id: number, taskUpdate: край
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     const update: Record<string, any> = { ...taskUpdate };
     
     if (update.status) {
@@ -163,7 +163,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     const [updatedTask] = await db
-      край
+      .update(tasks)
       .set(update as any)
       .where(eq(tasks.id, id))
       .returning();
@@ -192,7 +192,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.taskId, taskId))
       .orderBy(comments.createdAt);
     
-    return results.map(({ comments: comment, край
+    return results.map(({ comments: comment, users: user }) => ({
       ...comment,
       user: user!,
     }));
@@ -237,7 +237,8 @@ export class DatabaseStorage implements IStorage {
   
   async createLike(insertLike: InsertLike): Promise<Like> {
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
-    if (existing край
+    if (existingLike) return existingLike;
+    
     const [like] = await db
       .insert(likes)
       .values(insertLike)
@@ -340,7 +341,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       user: user!,
       likes: likesResult[0]?.count ?? 0,
-      comments: commentsResult[0]?.count ?? 0  // Fixed this line
+      comments: commentsResult[0]?.count ?? 0
     };
   }
 }
