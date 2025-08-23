@@ -94,25 +94,21 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Use snake_case column names that match the database schema
-    const userToInsert = {
-      username: insertUser.username,
-      email: insertUser.email,
-      display_name: insertUser.displayName, // Use snake_case for database column
-      password: insertUser.password,
-      avatar_url: insertUser.avatarUrl || null, // Use snake_case for database column
-      bio: insertUser.bio || null
-    };
-
-    const [user] = await db.insert(users).values(userToInsert).returning();
-    return user;
+    // Use a direct SQL approach to ensure proper field mapping
+    const result = await db.execute(sql`
+      INSERT INTO users (username, email, display_name, password, avatar_url, bio)
+      VALUES (${insertUser.username}, ${insertUser.email}, ${insertUser.displayName}, ${insertUser.password}, ${insertUser.avatarUrl || null}, ${insertUser.bio || null})
+      RETURNING *
+    `);
+    
+    return result.rows[0] as User;
   }
   
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select()
       .from(tasks)
-      .orderBy(desc(tasks.createdAt)); // Sort by most recently created first
+      .orderBy(desc(tasks.createdAt));
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
@@ -126,7 +122,7 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.userId, userId))
-      .orderBy(desc(tasks.createdAt)); // Sort by most recently created first
+      .orderBy(desc(tasks.createdAt));
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
@@ -139,26 +135,20 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
-    // Handle the status field separately
     if (update.status) {
-      // Ensure status is a valid TaskStatus
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
-        // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
-        
-        // When status changes, update the createdAt timestamp to bring it to the top of the feed
         update.createdAt = new Date();
       } else {
-        delete update.status; // Remove invalid status
+        delete update.status;
       }
     }
     
     const [updatedTask] = await db
       .update(tasks)
-      .set(update as any) // Cast to any to bypass type checking for now
+      .set(update as any)
       .where(eq(tasks.id, id))
       .returning();
     
@@ -166,13 +156,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteTask(id: number): Promise<boolean> {
-    // Delete associated comments
     await db.delete(comments).where(eq(comments.taskId, id));
-    
-    // Delete associated likes
     await db.delete(likes).where(eq(likes.taskId, id));
     
-    // Delete the task
     const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
@@ -234,7 +220,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
-    // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
@@ -269,7 +254,6 @@ export class DatabaseStorage implements IStorage {
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
-    // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 3);
@@ -341,7 +325,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       user: user!,
       likes: likesResult[0]?.count ?? 0,
-      comments: commentsResult[0]?.count ?? 0
+      comments: commentsResult[0]?.count |> 0
     };
   }
 }
