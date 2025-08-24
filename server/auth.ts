@@ -5,7 +5,6 @@ import memorystore from 'memorystore';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { storage } from './storage';
 import { User } from '../shared/schema';
-import { z } from 'zod';
 
 const MemoryStore = memorystore(session);
 
@@ -81,6 +80,63 @@ export function configureAuth(app: express.Application) {
     })(req, res, next);
   });
 
+  // Handle both /api/auth/register and /api/register for compatibility
+  const handleRegister = async (req: express.Request, res: express.Response) => {
+    console.log("Registration request received at:", new Date().toISOString());
+    console.log("Request body:", req.body);
+    
+    try {
+      const { email, username, displayName, password } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        console.log("Registration failed: username already exists");
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        console.log("Registration failed: email already exists");
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+
+      // Create user
+      console.log("Creating user in database...");
+      const user = await storage.createUser({
+        email,
+        username,
+        displayName,
+        password,
+        avatarUrl: null,
+        bio: null
+      });
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      
+      console.log("User created successfully with ID:", user.id);
+      
+      // Auto-login after registration
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error("Auto-login error:", err);
+          return res.status(500).json({ message: 'Registration successful but auto-login failed' });
+        }
+        
+        console.log("Auto-login successful for user ID:", user.id);
+        res.status(201).json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+  // Register both routes
+  app.post('/api/auth/register', handleRegister);
+  app.post('/api/register', handleRegister);
+
   app.post('/api/logout', (req, res) => {
     req.logout(() => {
       res.json({ success: true });
@@ -93,98 +149,5 @@ export function configureAuth(app: express.Application) {
       return res.json(userWithoutPassword);
     }
     res.status(401).json({ message: 'Not authenticated' });
-  });
-
-  // Registration endpoint with manual validation
-  app.post('/api/auth/register', async (req, res) => {
-    console.log('Registration request received at:', new Date().toISOString());
-    
-    try {
-      console.log('Request body:', req.body);
-      
-      // MANUAL VALIDATION - Temporary fix
-      if (!req.body.username || !req.body.email || !req.body.password || !req.body.displayName) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-      
-      // Manual validation of email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(req.body.email)) {
-        return res.status(400).json({ message: 'Invalid email format' });
-      }
-      
-      // Create user data object with proper mapping
-      const userData = {
-        username: req.body.username,
-        email: req.body.email,
-        password: req.body.password,
-        displayName: req.body.displayName,
-        avatarUrl: req.body.avatarUrl || null,
-        bio: req.body.bio || null
-      };
-      
-      console.log('Processed user data:', userData);
-      
-      // Check if user already exists
-      console.log('Checking if username exists:', userData.username);
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        console.log('Username already exists:', userData.username);
-        return res.status(400).json({ message: 'Username already exists' });
-      }
-      
-      console.log('Checking if email exists:', userData.email);
-      const existingEmail = await storage.getUserByEmail(userData.email);
-      if (existingEmail) {
-        console.log('Email already exists:', userData.email);
-        return res.status(400).json({ message: 'Email already exists' });
-      }
-      
-      // Create user
-      console.log('Creating user in database...');
-      const user = await storage.createUser(userData);
-      console.log('User created successfully with ID:', user.id);
-      
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
-      
-      // Automatically log in the user after registration
-      console.log('Attempting auto-login for user ID:', user.id);
-      req.login(user, (loginErr) => {
-        if (loginErr) {
-          console.error('Auto-login failed:', loginErr);
-          return res.status(500).json({ message: 'Registration successful but automatic login failed' });
-        }
-        console.log('Auto-login successful for user ID:', user.id);
-        return res.status(201).json(userWithoutPassword);
-      });
-    } catch (error) {
-      console.error('Registration error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        name: error instanceof Error ? error.name : 'No error name',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
-      });
-      res.status(500).json({ message: 'Failed to register user' });
-    }
-  });
-
-  // Add database test endpoint
-  app.get('/api/auth/test-db', async (req, res) => {
-    try {
-      // Test if we can query the database
-      const testUser = await storage.getUserByUsername('testuser');
-      res.json({ 
-        success: true, 
-        message: 'Database connection successful',
-        testUser: testUser ? 'User exists' : 'No test user found'
-      });
-    } catch (error) {
-      console.error('Database test failed:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Database connection failed',
-        error: error.message 
-      });
-    }
   });
 }
