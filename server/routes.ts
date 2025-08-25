@@ -58,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     if (req.isAuthenticated() && req.user) {
       tasksWithLikeStatus = await Promise.all(
         tasks.map(async (task) => {
-          const liked = await storage.getLike(req.user!.id, task.id);
+          const liked = await storage.getLike((req.user as any).id, task.id);
           return { ...task, liked: !!liked };
         })
       );
@@ -78,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const count = await storage.getPendingTasksCount(req.user.id);
+    const count = await storage.getPendingTasksCount((req.user as any).id);
     res.json({ count });
   });
   
@@ -95,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     
     let liked = false;
     if (req.isAuthenticated() && req.user) {
-      const likeRecord = await storage.getLike(req.user.id, task.id);
+      const likeRecord = await storage.getLike((req.user as any).id, task.id);
       liked = !!likeRecord;
     }
     
@@ -108,9 +108,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
     
     try {
+      console.log("Creating task with data:", req.body);
+      console.log("User ID:", (req.user as any).id);
+      
       const taskData = insertTaskSchema.parse({
         ...req.body,
-        userId: req.user.id,
+        userId: (req.user as any).id,
       });
       
       if (!taskStatus.safeParse(taskData.status).success) {
@@ -118,12 +121,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const task = await storage.createTask(taskData);
+      console.log("Task created successfully:", task);
+      
       const fullTask = await storage.getTask(task.id);
       
       broadcastMessage(WebSocketEvent.NEW_TASK, fullTask);
       
       res.status(201).json(task);
     } catch (error) {
+      console.error("Task creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
@@ -147,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      if (task.userId !== req.user.id) {
+      if (task.userId !== (req.user as any).id) {
         return res.status(403).json({ message: "You cannot update this task" });
       }
       
@@ -195,8 +201,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    const isAdmin = req.user.username === "ashterabbas";
-    if (task.userId !== req.user.id && !isAdmin) {
+    const isAdmin = (req.user as any).username === "ashterabbas";
+    if (task.userId !== (req.user as any).id && !isAdmin) {
       return res.status(403).json({ message: "You cannot delete this task" });
     }
     
@@ -237,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const commentData = insertCommentSchema.parse({
         ...req.body,
-        userId: req.user.id,
+        userId: (req.user as any).id,
         taskId
       });
       
@@ -273,9 +279,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      const existingLike = await storage.getLike(req.user.id, taskId);
+      const existingLike = await storage.getLike((req.user as any).id, taskId);
       if (existingLike) {
-        await storage.deleteLike(req.user.id, taskId);
+        await storage.deleteLike((req.user as any).id, taskId);
         const updatedTask = await storage.getTask(taskId);
         
         if (updatedTask) {
@@ -290,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const likeData = insertLikeSchema.parse({
-        userId: req.user.id,
+        userId: (req.user as any).id,
         taskId
       });
       
