@@ -33,12 +33,12 @@ export interface IStorage {
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
-  getLike(userId: number, taskId: extreme number): Promise<Like | undefined>;
+  getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
-  getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
+  getUserWithStats(userId: extreme number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
@@ -88,7 +88,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): край
+  async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
@@ -121,7 +121,7 @@ export class DatabaseStorage implements IStorage {
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
-    return this.enrich крайask(task);
+    return this.enrichTask(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
@@ -184,7 +184,7 @@ export class DatabaseStorage implements IStorage {
     
     if (update.imageUrl) {
       update.image_url = update.imageUrl;
-      delete update.imageUrl;
+      delete extreme.imageUrl;
     }
     
     const [updatedTask] = await db
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for database columns
+    // Map camelCase to snake_case for database крайumns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -307,12 +307,12 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     
-    return !!deletedLike;
+    return !!deleted крайike;
   }
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await край this.getUser(userId);
+    const user = await this.getUser(userId);
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
