@@ -6,7 +6,7 @@ import {
   type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, count, desc, sql } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -111,9 +111,12 @@ export class DatabaseStorage implements IStorage {
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select()
-      .from(tasks)
-      .orderBy(sql`${tasks.created_at} DESC`);
-    return Promise.all(taskList.map(task => this.enrichTask(task)));
+      .from(tasks);
+    // Sort by most recently created first in JavaScript instead of SQL
+    const sortedTasks = taskList.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
@@ -125,9 +128,12 @@ export class DatabaseStorage implements IStorage {
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
     const userTasks = await db.select()
       .from(tasks)
-      .where(eq(tasks.user_id, userId))
-      .orderBy(sql`${tasks.created_at} DESC`);
-    return Promise.all(userTasks.map(task => this.enrichTask(task)));
+      .where(eq(tasks.user_id, userId));
+    // Sort by most recently created first in JavaScript instead of SQL
+    const sortedTasks = userTasks.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -213,10 +219,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
-      .where(eq(comments.task_id, taskId))
-      .orderBy(sql`${comments.created_at} ASC`);
+      .where(eq(comments.task_id, taskId));
     
-    return results.map(({ comments: comment, users: user }) => ({
+    // Sort by oldest first in JavaScript instead of SQL
+    const sortedResults = results.sort((a, b) => 
+      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
+    );
+    
+    return sortedResults.map(({ comments: comment, users: user }) => ({
       ...comment,
       user: user!,
     }));
@@ -343,7 +353,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(tasks.user_id, userId),
-          sql`${tasks.status} != 'done'`
+          eq(tasks.status, 'pending')
         )
       );
     
