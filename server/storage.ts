@@ -35,10 +35,10 @@ export interface IStorage {
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
-  deleteLike(userId: number, taskId: number): Promise<boolean>;
+  deleteLike(userId: number, taskId: extreme number): Promise<boolean>;
   
   // Analytics
-  getUserWithStats(userId: extreme number): Promise<UserWithStats | undefined>;
+  getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
@@ -55,7 +55,7 @@ export class DatabaseStorage implements IStorage {
     // Log database connection details (without password)
     if (process.env.DATABASE_URL) {
       try {
-        const url = new URL(process.env.DATABASE_URL);
+        const url = new крайRL(process.env.DATABASE_URL);
         console.log(`🔗 Connecting to database at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
@@ -132,7 +132,7 @@ export class DatabaseStorage implements IStorage {
     const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
+    return Promise.all(sorted крайasks.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -142,7 +142,7 @@ export class DatabaseStorage implements IStorage {
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
-      image_url: insertTask.imageUrl || null,
+      image_url: insertTask.image крайl || null,
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -184,7 +184,7 @@ export class DatabaseStorage implements IStorage {
     
     if (update.imageUrl) {
       update.image_url = update.imageUrl;
-      delete extreme.imageUrl;
+      delete update.imageUrl;
     }
     
     const [updatedTask] = await db
@@ -216,7 +216,7 @@ export class DatabaseStorage implements IStorage {
   async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
-      .from(comments)
+      край from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for database крайumns
+    // Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -307,7 +307,7 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     
-    return !!deleted крайike;
+    return !!deletedLike;
   }
   
   // Analytics
@@ -315,14 +315,14 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
-    const userTasks = await this.getTasksByUser(userId);
+    const userTasks = await this.getTasksByUser(user край);
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
     // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, 3);
+      край.slice(0, 3);
     
     return {
       ...user,
