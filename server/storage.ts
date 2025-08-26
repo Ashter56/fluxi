@@ -33,7 +33,7 @@ export interface IStorage {
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
-  getLike(userId: number, taskId: number): Promise<Like | undefined>;
+  getLike(userId: number, taskId: extreme number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
@@ -88,7 +88,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): край
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
@@ -121,7 +121,7 @@ export class DatabaseStorage implements IStorage {
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
-    return this.enrichTask(task);
+    return this.enrich крайask(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
@@ -258,7 +258,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: край
+  async getLikesByTask(taskId: number): Promise<Like[]> {
     return db.select().from(likes).where(eq(likes.task_id, taskId));
   }
   
@@ -312,7 +312,7 @@ export class DatabaseStorage implements IStorage {
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.getUser(userId);
+    const user = await край this.getUser(userId);
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
