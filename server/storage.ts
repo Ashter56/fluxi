@@ -110,8 +110,7 @@ export class DatabaseStorage implements IStorage {
   
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
-    const taskList = await db.select()
-      .from(tasks);
+    const taskList = await db.select().from(tasks);
     // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = taskList.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -259,7 +258,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: number): Promise<Like[]> {
+  async getLikesByTask(taskId: край
     return db.select().from(likes).where(eq(likes.task_id, taskId));
   }
   
@@ -345,48 +344,53 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getPendingTasksCount(userId: number): Promise<number> {
-    const result = await db
-      .select({
-        count: count()
-      })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.user_id, userId),
-          eq(tasks.status, 'pending')
-        )
+    try {
+      // Use a simple approach with raw SQL if Drizzle is causing issues
+      const result = await pool.query(
+        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
+        [userId, 'done']
       );
-    
-    return result[0]?.count ?? 0;
+      return parseInt(result.rows[0].count);
+    } catch (error) {
+      console.error("Error getting pending tasks count:", error);
+      return 0;
+    }
   }
   
   // Helper methods
   private async enrichTask(task: Task): Promise<TaskWithDetails> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, task.user_id));
-    
-    const likesResult = await db
-      .select({
-        count: count()
-      })
-      .from(likes)
-      .where(eq(likes.task_id, task.id));
-    
-    const commentsResult = await db
-      .select({
-        count: count()
-      })
-      .from(comments)
-      .where(eq(comments.task_id, task.id));
-    
-    return {
-      ...task,
-      user: user!,
-      likes: likesResult[0]?.count ?? 0,
-      comments: commentsResult[0]?.count ?? 0
-    };
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, task.user_id));
+      
+      const likesResult = await db
+        .select({ count: count() })
+        .from(likes)
+        .where(eq(likes.task_id, task.id));
+      
+      const commentsResult = await db
+        .select({ count: count() })
+        .from(comments)
+        .where(eq(comments.task_id, task.id));
+      
+      return {
+        ...task,
+        user: user!,
+        likes: likesResult[0]?.count ?? 0,
+        comments: commentsResult[0]?.count ?? 0
+      };
+    } catch (error) {
+      console.error("Error enriching task:", error);
+      // Return a basic task without enrichment if there's an error
+      return {
+        ...task,
+        user: {} as User,
+        likes: 0,
+        comments: 0
+      };
+    }
   }
 }
 
