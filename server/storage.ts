@@ -112,7 +112,7 @@ export class DatabaseStorage implements IStorage {
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select()
       .from(tasks)
-      .orderBy(sql`created_at DESC`); // Use raw SQL for ordering
+      .orderBy(sql`${tasks.created_at} DESC`);
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId))
-      .orderBy(sql`created_at DESC`); // Use raw SQL for ordering
+      .orderBy(sql`${tasks.created_at} DESC`);
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
@@ -144,8 +144,13 @@ export class DatabaseStorage implements IStorage {
 
     console.log("Creating task with data:", taskToInsert);
     
-    const [task] = await db.insert(tasks).values(taskToInsert).returning();
-    return task;
+    try {
+      const [task] = await db.insert(tasks).values(taskToInsert).returning();
+      return task;
+    } catch (error) {
+      console.error("Error creating task:", error);
+      throw error;
+    }
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
@@ -209,7 +214,7 @@ export class DatabaseStorage implements IStorage {
       .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId))
-      .orderBy(sql`created_at ASC`); // Use raw SQL for ordering
+      .orderBy(sql`${comments.created_at} ASC`);
     
     return results.map(({ comments: comment, users: user }) => ({
       ...comment,
