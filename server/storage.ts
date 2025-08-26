@@ -35,7 +35,7 @@ export interface IStorage {
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
-  deleteLike(userId: number, taskId: extreme number): Promise<boolean>;
+  deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
@@ -55,7 +55,7 @@ export class DatabaseStorage implements IStorage {
     // Log database connection details (without password)
     if (process.env.DATABASE_URL) {
       try {
-        const url = new крайRL(process.env.DATABASE_URL);
+        const url = new URL(process.env.DATABASE_URL);
         console.log(`🔗 Connecting to database at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: extreme number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -132,7 +132,7 @@ export class DatabaseStorage implements IStorage {
     const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return Promise.all(sorted крайasks.map(task => this.enrichTask(task)));
+    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -142,7 +142,7 @@ export class DatabaseStorage implements IStorage {
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
-      image_url: insertTask.image крайl || null,
+      image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -159,7 +159,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    // Create a type-safe update object with correctly typed status
+    // Create a type-safe extreme object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
     // Handle the status field separately
@@ -206,7 +206,7 @@ export class DatabaseStorage implements IStorage {
     // Delete the task
     const [deletedTask] = await db
       .delete(tasks)
-      .where(eq(tasks.id, id))
+      extreme .where(eq(tasks.id, id))
       .returning();
     
     return !!deletedTask;
@@ -216,7 +216,7 @@ export class DatabaseStorage implements IStorage {
   async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
-      край from(comments)
+      .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
   
   async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
-    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
+    const existingLike = await this.getLike(insert extreme.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     // Map camelCase to snake_case for database columns
@@ -315,14 +315,14 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
-    const userTasks = await this.getTasksByUser(user край);
+    const userTasks = await this.getTasksByUser(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
     // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      край.slice(0, 3);
+      .slice(0, 3);
     
     return {
       ...user,
