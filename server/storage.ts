@@ -112,7 +112,7 @@ export class DatabaseStorage implements IStorage {
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select()
       .from(tasks)
-      .orderBy(desc(tasks.created_at)); // Sort by most recently created first
+      .orderBy(desc(tasks.created_at)); // Use the correct column name
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId))
-      .orderBy(desc(tasks.created_at)); // Sort by most recently created first
+      .orderBy(desc(tasks.created_at)); // Use the correct column name
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
@@ -330,7 +330,7 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .leftJoin(likes, eq(tasks.id, likes.task_id))
       .groupBy(tasks.id)
-      .orderBy(desc(sql`"likeCount"`))
+      .orderBy(desc(sql`like_count`)) // Use a simpler approach
       .limit(limit);
     
     return Promise.all(results.map(({ task }) => this.enrichTask(task)));
