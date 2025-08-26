@@ -98,9 +98,9 @@ export class DatabaseStorage implements IStorage {
     const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
-      display_name: insertUser.displayName, // Use snake_case for database column
+      display_name: insertUser.displayName,
       password: insertUser.password,
-      avatar_url: insertUser.avatarUrl || null, // Use snake_case for database column
+      avatar_url: insertUser.avatarUrl || null,
       bio: insertUser.bio || null
     };
 
@@ -112,7 +112,7 @@ export class DatabaseStorage implements IStorage {
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select()
       .from(tasks)
-      .orderBy(desc(tasks.created_at)); // Use the correct column name
+      .orderBy(sql`created_at DESC`); // Use raw SQL for ordering
     return Promise.all(taskList.map(task => this.enrichTask(task)));
   }
   
@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId))
-      .orderBy(desc(tasks.created_at)); // Use the correct column name
+      .orderBy(sql`created_at DESC`); // Use raw SQL for ordering
     return Promise.all(userTasks.map(task => this.enrichTask(task)));
   }
   
@@ -136,8 +136,8 @@ export class DatabaseStorage implements IStorage {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
-      user_id: insertTask.userId,  // Map to database column name
-      image_url: insertTask.imageUrl || null, // Map to database column name
+      user_id: insertTask.userId,
+      image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
       .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId))
-      .orderBy(comments.created_at);
+      .orderBy(sql`created_at ASC`); // Use raw SQL for ordering
     
     return results.map(({ comments: comment, users: user }) => ({
       ...comment,
@@ -322,18 +322,11 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
-    const results = await db
-      .select({
-        task: tasks,
-        likeCount: count(likes.id).as('likeCount')
-      })
-      .from(tasks)
-      .leftJoin(likes, eq(tasks.id, likes.task_id))
-      .groupBy(tasks.id)
-      .orderBy(desc(sql`like_count`)) // Use a simpler approach
-      .limit(limit);
-    
-    return Promise.all(results.map(({ task }) => this.enrichTask(task)));
+    // Simple implementation without complex SQL
+    const allTasks = await this.getTasks();
+    return allTasks
+      .sort((a, b) => b.likes - a.likes)
+      .slice(0, limit);
   }
   
   async getPendingTasksCount(userId: number): Promise<number> {
