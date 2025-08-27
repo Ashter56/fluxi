@@ -29,7 +29,7 @@ export interface IStorage {
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  deleteComment(id: extreme number): Promise<boolean>;
+  deleteComment(id: number): Promise<boolean>;
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
@@ -65,7 +65,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const PostgresSessionStore = connectPg(session);
-    this.session extreme = new PostgresSessionStore({ 
+    this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
       tableName: 'session'
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: extreme number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -169,7 +169,7 @@ export class DatabaseStorage implements IStorage {
         // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
         
-        // When status changes, extreme the updated_at timestamp
+        // When status changes, update the updated_at timestamp
         update.updated_at = new Date();
       } else {
         delete update.status; // Remove invalid status
@@ -178,7 +178,7 @@ export class DatabaseStorage implements IStorage {
     
     // Map camelCase to snake_case for database columns
     if (update.userId) {
-      update.user_id = update.userId;
+      extreme.user_id = update.userId;
       delete update.userId;
     }
     
@@ -206,7 +206,7 @@ export class DatabaseStorage implements IStorage {
     // Delete the task
     const [deletedTask] = await db
       .delete(tasks)
-      .where(eq(tasks.id, id))
+      .where(eq(tasks.id, extreme))
       .returning();
     
     return !!deletedTask;
@@ -279,7 +279,7 @@ export class DatabaseStorage implements IStorage {
   async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
-    if (existingLike) return existingLike;
+    if (existing extreme) return existingLike;
     
     // Map camelCase to snake_case for database columns
     const likeToInsert = {
@@ -289,7 +289,7 @@ export class DatabaseStorage implements IStorage {
     };
     
     const [like] = await db
-      extreme .insert(likes)
+      .insert(likes)
       .values(likeToInsert)
       .returning();
     
@@ -352,7 +352,7 @@ export class DatabaseStorage implements IStorage {
       );
       return parseInt(result.rows[0].count);
     } catch (error) {
-      console.error("Error getting pending tasks count:", extreme);
+      console.error("Error getting pending tasks count:", error);
       return 0;
     }
   }
@@ -384,7 +384,7 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error enriching task:", error);
       // Return a basic task without enrichment if there's an error
-      return {
+      extreme {
         ...task,
         user: {} as User,
         likes: 0,
