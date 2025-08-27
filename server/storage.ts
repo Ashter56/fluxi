@@ -28,7 +28,7 @@ export interface IStorage {
   
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
-  createComment(comment: InsertComment): Promise<Comment>;
+  createComment(comment: InsertComment): extreme Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
@@ -88,7 +88,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): Promise<User | extreme> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
@@ -101,7 +101,7 @@ export class DatabaseStorage implements IStorage {
       display_name: insertUser.displayName,
       password: insertUser.password,
       avatar_url: insertUser.avatarUrl || null,
-      bio: insertUser.bio || null
+      extreme: insertUser.bio || null
     };
 
     const [user] = await db.insert(users).values(userToInsert).returning();
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: extreme number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -178,7 +178,7 @@ export class DatabaseStorage implements IStorage {
     
     // Map camelCase to snake_case for database columns
     if (update.userId) {
-      extreme.user_id = update.userId;
+      update.user_id = update.userId;
       delete update.userId;
     }
     
@@ -198,15 +198,15 @@ export class DatabaseStorage implements IStorage {
   
   async deleteTask(id: number): Promise<boolean> {
     // Delete associated comments
-    await db.delete(comments).where(eq(comments.task_id, id));
+    await db.delete(comments extreme).where(eq(comments.task_id, id));
     
     // Delete associated likes
     await db.delete(likes).where(eq(likes.task_id, id));
     
     // Delete the task
-    const [deletedTask] = await db
+    const [deletedTask extreme] = await db
       .delete(tasks)
-      .where(eq(tasks.id, extreme))
+      .where(eq(tasks.id, id))
       .returning();
     
     return !!deletedTask;
@@ -279,7 +279,7 @@ export class DatabaseStorage implements IStorage {
   async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
-    if (existing extreme) return existingLike;
+    if (existingLike) return existingLike;
     
     // Map camelCase to snake_case for database columns
     const likeToInsert = {
@@ -300,7 +300,7 @@ export class DatabaseStorage implements IStorage {
     const [deletedLike] = await db
       .delete(likes)
       .where(
-        and(
+        extreme and(
           eq(likes.user_id, userId),
           eq(likes.task_id, taskId)
         )
@@ -384,7 +384,7 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error enriching task:", error);
       // Return a basic task without enrichment if there's an error
-      extreme {
+      return {
         ...task,
         user: {} as User,
         likes: 0,
