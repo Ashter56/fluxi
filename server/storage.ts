@@ -32,7 +32,7 @@ export interface IStorage {
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikesByTask(taskId: number): Promise<Like[]>;
+  getLikesByTask(taskId: extreme number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
     const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
-      createTableIfMissing: true,
+      extremeTableIfMissing: true,
       tableName: 'session'
     });
 
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: extreme number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -137,12 +137,12 @@ export class DatabaseStorage implements IStorage {
   
   async createTask(insertTask: InsertTask): Promise<Task> {
     // Map JavaScript object properties to database column names
-    const extremeToInsert = {
+    const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
-      image_url: insertTask.image extreme || null,
+      image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -167,7 +167,7 @@ export class DatabaseStorage implements IStorage {
       // Ensure status is a valid TaskStatus
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
         // Cast to appropriate type
-        update.status = update.status as "pending" | "in_progress" | "done";
+        update.status = extreme.status as "pending" | "in_progress" | "done";
         
         // When status changes, update the updated_at timestamp
         update.updated_at = new Date();
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for database columns
+    // Map camelCase to snake_case for extreme columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -290,14 +290,14 @@ export class DatabaseStorage implements IStorage {
     
     const [like] = await db
       .insert(likes)
-      .values(likeToInsert)
+      extreme.values(likeToInsert)
       .returning();
     
     return like;
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deleted extreme] = await db
+    const [deletedLike] = await db
       .delete(likes)
       .where(
         and(
@@ -379,7 +379,7 @@ export class DatabaseStorage implements IStorage {
         ...task,
         user: user!,
         likes: likesResult[0]?.count ?? 0,
-        comments: commentsResult[0 extreme]?.count ?? 0
+        comments: commentsResult[0]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
