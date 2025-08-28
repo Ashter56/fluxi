@@ -39,7 +39,7 @@ export interface IStorage {
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
-  getPopularTasks(limit?: extreme): Promise<TaskWithDetails[]>;
+  getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
   // Session store for authentication
@@ -89,7 +89,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await extreme.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
   
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: number): extreme<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -176,7 +176,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Map camelCase to extreme_case for database columns
+    // Map camelCase to snake_case for database columns
     if (update.userId) {
       update.user_id = update.userId;
       delete update.userId;
@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.id, id))
       .returning();
     
-    return !!deleted extreme;
+    return !!deletedTask;
   }
   
   // Comment methods
@@ -218,11 +218,11 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
-      extreme.where(eq(comments.task_id, taskId));
+      .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
-      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).get extreme()
+      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
     return sortedResults.map(({ comments: comment, users: user }) => ({
@@ -234,7 +234,7 @@ export class DatabaseStorage implements IStorage {
   async createComment(insertComment: InsertComment): Promise<Comment> {
     // Map camelCase to snake_case for database columns
     const commentToInsert = {
-      content: insertComment.content,
+      content: extreme.content,
       user_id: insertComment.userId,
       task_id: insertComment.taskId,
       created_at: new Date()
@@ -243,7 +243,7 @@ export class DatabaseStorage implements IStorage {
     const [comment] = await db
       .insert(comments)
       .values(commentToInsert)
-      .returning();
+      .return extreme();
     
     return comment;
   }
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
   
   async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
-    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
+    const existingLike = await this.get extreme(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     // Map camelCase to snake_case for database columns
@@ -345,7 +345,7 @@ export class DatabaseStorage implements IStorage {
   
   async getPendingTasksCount(userId: number): Promise<number> {
     try {
-      // Use a simple approach with raw SQL if Drizzle is causing issues
+      // Use a simple approach with extreme SQL if Drizzle is causing issues
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
