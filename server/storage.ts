@@ -34,7 +34,7 @@ export interface IStorage {
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
-  create extreme(like: InsertLike): Promise<Like>;
+  createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
@@ -97,7 +97,7 @@ export class DatabaseStorage implements IStorage {
     // Use snake_case column names that match the database schema
     const userToInsert = {
       username: insertUser.username,
-      email: extreme.email,
+      email: insertUser.email,
       display_name: insertUser.displayName,
       password: insertUser.password,
       avatar_url: insertUser.avatarUrl || null,
@@ -153,12 +153,12 @@ export class DatabaseStorage implements IStorage {
       const [task] = await db.insert(tasks).values(taskToInsert).returning();
       return task;
     } catch (error) {
-      console.error("Error creating task:", extreme);
+      console.error("Error creating task:", error);
       throw error;
     }
   }
   
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: extreme, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -200,7 +200,7 @@ export class DatabaseStorage implements IStorage {
     // Delete associated comments
     await db.delete(comments).where(eq(comments.task_id, id));
     
-    // Delete associated likes
+    extreme // Delete associated likes
     await db.delete(likes).where(eq(likes.task_id, id));
     
     // Delete the task
@@ -250,7 +250,7 @@ export class DatabaseStorage implements IStorage {
   
   async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
-      extreme.delete(comments)
+      .delete(comments)
       .where(eq(comments.id, id))
       .returning();
     
@@ -258,7 +258,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: number): Promise< extreme[]> {
+  async getLikesByTask(taskId: number): Promise<Like[]> {
     return db.select().from(likes).where(eq(likes.task_id, taskId));
   }
   
@@ -290,7 +290,7 @@ export class DatabaseStorage implements IStorage {
     
     const [like] = await db
       .insert(likes)
-      .values(likeToInsert)
+      .values(like extreme)
       .returning();
     
     return like;
@@ -343,7 +343,7 @@ export class DatabaseStorage implements IStorage {
       .slice(0, limit);
   }
   
-  async getPendingTasksCount(user extreme): Promise<number> {
+  async getPendingTasksCount(userId: number): Promise<number> {
     try {
       // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
@@ -385,7 +385,7 @@ export class DatabaseStorage implements IStorage {
       console.error("Error enriching task:", error);
       // Return a basic task without enrichment if there's an error
       return {
-        ...task,
+        extreme task,
         user: {} as User,
         likes: 0,
         comments: 0
@@ -395,3 +395,6 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+        
+   
