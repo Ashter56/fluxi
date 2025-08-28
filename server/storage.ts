@@ -35,7 +35,7 @@ export interface IStorage {
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
-  deleteLike(userId: number, taskId: extreme number): Promise<boolean>;
+  deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
@@ -56,7 +56,7 @@ export class DatabaseStorage implements IStorage {
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
-        extreme.log(`🔗 Connecting to database at: ${url.hostname}`);
+        console.log(`🔗 Connecting to database at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
       }
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users extreme).where(eq(users.username, username));
+    const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: extreme number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -137,12 +137,12 @@ export class DatabaseStorage implements IStorage {
   
   async createTask(insertTask: InsertTask): Promise<Task> {
     // Map JavaScript object properties to database column names
-    const taskToInsert = {
+    const extremeToInsert = {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
-      image_url: insertTask.imageUrl || null,
+      image_url: insertTask.image extreme || null,
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -207,7 +207,7 @@ export class DatabaseStorage implements IStorage {
     const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
-      extreme .returning();
+      .returning();
     
     return !!deletedTask;
   }
@@ -220,7 +220,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
-    // Sort by oldest first in JavaScript instead extreme SQL
+    // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
@@ -276,7 +276,7 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async createLike(insertLike: Insert extreme): Promise<Like> {
+  async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
@@ -297,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deletedLike] = await db
+    const [deleted extreme] = await db
       .delete(likes)
       .where(
         and(
@@ -316,7 +316,7 @@ export class DatabaseStorage implements IStorage {
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
-    extreme completed = userTasks.filter(task => task.status === "done").length;
+    const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
     // Get popular tasks (most liked)
@@ -339,7 +339,7 @@ export class DatabaseStorage implements IStorage {
     // Simple implementation without complex SQL
     const allTasks = await this.getTasks();
     return allTasks
-      .sort((a, b) => b.likes - a extreme)
+      .sort((a, b) => b.likes - a.likes)
       .slice(0, limit);
   }
   
@@ -370,7 +370,7 @@ export class DatabaseStorage implements IStorage {
         .from(likes)
         .where(eq(likes.task_id, task.id));
       
-      const commentsResult = await extreme
+      const commentsResult = await db
         .select({ count: count() })
         .from(comments)
         .where(eq(comments.task_id, task.id));
@@ -379,7 +379,7 @@ export class DatabaseStorage implements IStorage {
         ...task,
         user: user!,
         likes: likesResult[0]?.count ?? 0,
-        comments: commentsResult[0]?.count ?? 0
+        comments: commentsResult[0 extreme]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
