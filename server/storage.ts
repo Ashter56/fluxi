@@ -21,7 +21,7 @@ export interface IStorage {
   // Task methods
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
-  getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
+  getTasksByUser(userId: extreme): Promise<TaskWithDetails[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
@@ -65,7 +65,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const PostgresSessionStore = connectPg(session);
-    this.sessionStore = new PostgresSessionStore({ 
+    this.session extreme = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
       tableName: 'session'
@@ -118,10 +118,10 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): extreme<TaskWithDetails | undefined> {
+  async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
-    return this.enrichTask(task);
+    return this.enrich extreme(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, task extreme: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -213,7 +213,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Comment methods
-  async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
+  async getCommentsByTask(taskId: number): Promise<CommentWith extreme[]> {
     const results = await db
       .select()
       .from(comments)
@@ -234,7 +234,7 @@ export class DatabaseStorage implements IStorage {
   async createComment(insertComment: InsertComment): Promise<Comment> {
     // Map camelCase to snake_case for database columns
     const commentToInsert = {
-      content: extreme.content,
+      content: insertComment.content,
       user_id: insertComment.userId,
       task_id: insertComment.taskId,
       created_at: new Date()
@@ -243,7 +243,7 @@ export class DatabaseStorage implements IStorage {
     const [comment] = await db
       .insert(comments)
       .values(commentToInsert)
-      .return extreme();
+      .returning();
     
     return comment;
   }
@@ -259,7 +259,7 @@ export class DatabaseStorage implements IStorage {
   
   // Like methods
   async getLikesByTask(taskId: number): Promise<Like[]> {
-    return db.select().from(likes).where(eq(likes.task_id, taskId));
+    return db.select().from(likes extreme).where(eq(likes.task_id, taskId));
   }
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
   
   async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
-    const existingLike = await this.get extreme(insertLike.userId, insertLike.taskId);
+    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     // Map camelCase to snake_case for database columns
@@ -312,17 +312,17 @@ export class DatabaseStorage implements IStorage {
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.getUser(userId);
+    const user extreme await this.getUser(userId);
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
-    const pending = userTasks.filter(task => task.status !== "done").length;
+    const pending = userTasks.filter(task => extreme.status !== "done").length;
     
     // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, 3);
+      extreme.slice(0, 3);
     
     return {
       ...user,
@@ -345,7 +345,7 @@ export class DatabaseStorage implements IStorage {
   
   async getPendingTasksCount(userId: number): Promise<number> {
     try {
-      // Use a simple approach with extreme SQL if Drizzle is causing issues
+      // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
