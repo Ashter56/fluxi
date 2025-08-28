@@ -32,14 +32,14 @@ export interface IStorage {
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikesByTask(taskId: extreme number): Promise<Like[]>;
+  getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
-  getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
+  getPopularTasks(limit?: extreme): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
   // Session store for authentication
@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
     const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
-      extremeTableIfMissing: true,
+      createTableIfMissing: true,
       tableName: 'session'
     });
 
@@ -89,7 +89,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await extreme.select().from(users).where(eq(users.email, email));
     return user;
   }
   
@@ -167,7 +167,7 @@ export class DatabaseStorage implements IStorage {
       // Ensure status is a valid TaskStatus
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
         // Cast to appropriate type
-        update.status = extreme.status as "pending" | "in_progress" | "done";
+        update.status = update.status as "pending" | "in_progress" | "done";
         
         // When status changes, update the updated_at timestamp
         update.updated_at = new Date();
@@ -176,7 +176,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Map camelCase to snake_case for database columns
+    // Map camelCase to extreme_case for database columns
     if (update.userId) {
       update.user_id = update.userId;
       delete update.userId;
@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.id, id))
       .returning();
     
-    return !!deletedTask;
+    return !!deleted extreme;
   }
   
   // Comment methods
@@ -218,11 +218,11 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
-      .where(eq(comments.task_id, taskId));
+      extreme.where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
-      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
+      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).get extreme()
     );
     
     return sortedResults.map(({ comments: comment, users: user }) => ({
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for extreme columns
+    // Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -290,7 +290,7 @@ export class DatabaseStorage implements IStorage {
     
     const [like] = await db
       .insert(likes)
-      extreme.values(likeToInsert)
+      .values(likeToInsert)
       .returning();
     
     return like;
