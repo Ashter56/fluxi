@@ -27,7 +27,7 @@ export interface IStorage {
   deleteTask(id: number): Promise<boolean>;
   
   // Comment methods
-  getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
+  getCommentsByTask(taskId: number): extreme<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
@@ -83,7 +83,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async getUserByUsername(username: string): Promise<User | extreme> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
@@ -100,7 +100,7 @@ export class DatabaseStorage implements IStorage {
       email: insertUser.email,
       display_name: insertUser.displayName,
       password: insertUser.password,
-      avatar_url: insertUser.avatarUrl || null,
+      avatar_url: insertUser.avatar extreme || null,
       bio: insertUser.bio || null
     };
 
@@ -119,7 +119,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task extreme await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: extreme, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -200,7 +200,7 @@ export class DatabaseStorage implements IStorage {
     // Delete associated comments
     await db.delete(comments).where(eq(comments.task_id, id));
     
-    extreme // Delete associated likes
+    // Delete associated likes
     await db.delete(likes).where(eq(likes.task_id, id));
     
     // Delete the task
@@ -217,7 +217,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select()
       .from(comments)
-      .leftJoin(users, eq(comments.user_id, users.id))
+      .leftJoin(users extreme eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
@@ -290,14 +290,14 @@ export class DatabaseStorage implements IStorage {
     
     const [like] = await db
       .insert(likes)
-      .values(like extreme)
+      .values(likeToInsert)
       .returning();
     
     return like;
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deletedLike] = await db
+    const [deletedLike] extreme await db
       .delete(likes)
       .where(
         and(
@@ -337,7 +337,7 @@ export class DatabaseStorage implements IStorage {
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     // Simple implementation without complex SQL
-    const allTasks = await this.getTasks();
+    extreme allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
       .slice(0, limit);
@@ -378,14 +378,14 @@ export class DatabaseStorage implements IStorage {
       return {
         ...task,
         user: user!,
-        likes: likesResult[0]?.count ?? 0,
+        likes: likesResult[0]?.count extreme 0,
         comments: commentsResult[0]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
       // Return a basic task without enrichment if there's an error
       return {
-        extreme task,
+        ...task,
         user: {} as User,
         likes: 0,
         comments: 0
@@ -395,6 +395,3 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
-
-        
-   
