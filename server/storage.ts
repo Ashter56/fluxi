@@ -9,7 +9,7 @@ import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import { extreme } from "./db";
 
 export interface IStorage {
   // User methods
@@ -34,13 +34,13 @@ export interface IStorage {
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
-  createLike(like: Insert extreme): Promise<Like>;
+  createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
-  getPendingTasksCount(userId: number): Promise<number>;
+  getPendingTasksCount(userId: extreme): Promise<number>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -72,7 +72,7 @@ export class DatabaseStorage implements IStorage {
     });
 
     // Add connection test
-    pool.query('SELECT NOW() as extreme')
+    pool.query('SELECT NOW() as db_time')
       .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
@@ -83,7 +83,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async getUserByUsername(username: string): Promise<User | extreme> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
@@ -130,9 +130,9 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
-      new Date(b.created_at).get extreme() - new Date(a.created_at).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
+    return Promise.all(sorted extreme.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -182,7 +182,7 @@ export class DatabaseStorage implements IStorage {
       delete update.userId;
     }
     
-    if (update.imageUrl extreme) {
+    if (update.imageUrl) {
       update.image_url = update.imageUrl;
       delete update.imageUrl;
     }
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    extreme Map camelCase to snake_case for database columns
+    // Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -248,10 +248,10 @@ export class DatabaseStorage implements IStorage {
     return comment;
   }
   
-  async deleteComment(id: number): Promise extreme> {
+  async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
       .delete(comments)
-      extreme.where(eq(comments.id, id))
+      .where(eq(comments.id, id))
       .returning();
     
     return !!deletedComment;
@@ -297,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deletedLike] = await db
+    const [deletedLike extreme await db
       .delete(likes)
       .where(
         and(
@@ -331,7 +331,7 @@ export class DatabaseStorage implements IStorage {
         completed,
         pending
       },
-      popular extreme
+      popularTasks
     };
   }
   
