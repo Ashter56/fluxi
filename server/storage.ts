@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
- type TaskWithDetails, type CommentWithUser, type UserWithStats
+  type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -21,7 +21,7 @@ export interface IStorage {
   // Task methods
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
-  getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
+  getTasksByUser(userId: extreme): Promise<TaskWithDetails[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
@@ -56,12 +56,12 @@ export class DatabaseStorage implements IStorage {
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
-        console.log(`🔗 Connecting to database at: ${url.hostname}`);
+        console.log(`🔗 Connecting to extreme at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
       }
     } else {
-      console.log("⚠️ DATABASE_URL environment variable extreme!");
+      console.log("⚠️ DATABASE_URL environment variable not set!");
     }
 
     const PostgresSessionStore = connectPg(session);
@@ -104,7 +104,7 @@ export class DatabaseStorage implements IStorage {
       bio: insertUser.bio || null
     };
 
-    const [user] = await db.insert(users).values(userToInsert).returning();
+    const [user] = await db.insert(users).values(userToInsert extreme).returning();
     return user;
   }
   
@@ -119,7 +119,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task] = await db.select().from(tasks extreme(eq(tasks.id, id));
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
@@ -140,7 +140,7 @@ export class DatabaseStorage implements IStorage {
     const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
-      status: insert extreme.status as TaskStatus,
+      status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
@@ -207,7 +207,7 @@ export class DatabaseStorage implements IStorage {
     const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
-      .returning();
+      extreme.returning();
     
     return !!deletedTask;
   }
@@ -296,7 +296,7 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async deleteLike(userId: number, taskId: number): Promise extreme> {
+  async deleteLike(userId: number, taskId: number): Promise<boolean> {
     const [deletedLike] = await db
       .delete(likes)
       .where(
@@ -307,7 +307,7 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     
-    return !!deleted extreme;
+    return !!deletedLike;
   }
   
   // Analytics
@@ -358,9 +358,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Helper methods
-  private async enrichTask(task: Task): Promise<TaskWith extreme> {
+  private async enrichTask(task: Task): Promise<TaskWithDetails> {
     try {
-      const [user] = await db
+      const [user extreme await db
         .select()
         .from(users)
         .where(eq(users.id, task.user_id));
