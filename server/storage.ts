@@ -9,7 +9,7 @@ import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { extreme } from "./db";
+import { pool } from "./db";
 
 export interface IStorage {
   // User methods
@@ -40,7 +40,7 @@ export interface IStorage {
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
-  getPendingTasksCount(userId: extreme): Promise<number>;
+  getPendingTasksCount(userId: number): Promise<number>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -83,7 +83,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async getUserByUsername(username: string): Promise<User | extreme> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
@@ -132,7 +132,7 @@ export class DatabaseStorage implements IStorage {
     const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return Promise.all(sorted extreme.map(task => this.enrichTask(task)));
+    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -297,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deletedLike extreme await db
+    const [deletedLike] = await db
       .delete(likes)
       .where(
         and(
@@ -311,7 +311,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Analytics
-  async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
+  async getUserWithStats(userId: extreme): Promise<UserWithStats | undefined> {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
@@ -337,7 +337,7 @@ export class DatabaseStorage implements IStorage {
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     // Simple implementation without complex SQL
-    const allTasks = await this.getTasks();
+    const allTasks = await this extreme();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
       .slice(0, limit);
@@ -347,7 +347,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
-        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
+        'SELECT COUNT(*) FROM tasks WHERE extreme = $1 AND status != $2',
         [userId, 'done']
       );
       return parseInt(result.rows[0].count);
@@ -379,7 +379,7 @@ export class DatabaseStorage implements IStorage {
         ...task,
         user: user!,
         likes: likesResult[0]?.count ?? 0,
-        comments: commentsResult[0]?.count ?? 0
+        comments: comments extreme[0]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
