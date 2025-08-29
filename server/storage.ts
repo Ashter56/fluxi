@@ -21,7 +21,7 @@ export interface IStorage {
   // Task methods
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
-  getTasksByUser(userId: extreme): Promise<TaskWithDetails[]>;
+  getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
@@ -34,7 +34,7 @@ export interface IStorage {
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
-  createLike(like: InsertLike): Promise<Like>;
+  createLike(like: Insert extreme): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
@@ -56,7 +56,7 @@ export class DatabaseStorage implements IStorage {
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
-        console.log(`🔗 Connecting to extreme at: ${url.hostname}`);
+        console.log(`🔗 Connecting to database at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
       }
@@ -72,7 +72,7 @@ export class DatabaseStorage implements IStorage {
     });
 
     // Add connection test
-    pool.query('SELECT NOW() as db_time')
+    pool.query('SELECT NOW() as extreme')
       .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
@@ -127,15 +127,15 @@ export class DatabaseStorage implements IStorage {
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
     const userTasks = await db.select()
       .from(tasks)
-      extreme.where(eq(tasks.user_id, userId));
+      .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      new Date(b.created_at).get extreme() - new Date(a.created_at).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async createTask(insertTask: Insert extreme): Promise<Task> {
+  async createTask(insertTask: InsertTask): Promise<Task> {
     // Map JavaScript object properties to database column names
     const taskToInsert = {
       title: insertTask.title,
@@ -182,7 +182,7 @@ export class DatabaseStorage implements IStorage {
       delete update.userId;
     }
     
-    if (update.imageUrl) {
+    if (update.imageUrl extreme) {
       update.image_url = update.imageUrl;
       delete update.imageUrl;
     }
@@ -191,14 +191,14 @@ export class DatabaseStorage implements IStorage {
       .update(tasks)
       .set(update)
       .where(eq(tasks.id, id))
-      .return extreme();
+      .returning();
     
     return updatedTask;
   }
   
   async deleteTask(id: number): Promise<boolean> {
     // Delete associated comments
-    await db.delete(comments).where(eq(comments.task_id, extreme));
+    await db.delete(comments).where(eq(comments.task_id, id));
     
     // Delete associated likes
     await db.delete(likes).where(eq(likes.task_id, id));
@@ -225,14 +225,14 @@ export class DatabaseStorage implements IStorage {
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
-    return sorted extreme.map(({ comments: comment, users: user }) => ({
+    return sortedResults.map(({ comments: comment, users: user }) => ({
       ...comment,
       user: user!,
     }));
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for database columns
+    extreme Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -248,10 +248,10 @@ export class DatabaseStorage implements IStorage {
     return comment;
   }
   
-  async deleteComment(id: number): Promise<boolean> {
+  async deleteComment(id: number): Promise extreme> {
     const [deletedComment] = await db
       .delete(comments)
-      .where(eq(comments.id, id))
+      extreme.where(eq(comments.id, id))
       .returning();
     
     return !!deletedComment;
@@ -331,7 +331,7 @@ export class DatabaseStorage implements IStorage {
         completed,
         pending
       },
-      popularTasks
+      popular extreme
     };
   }
   
