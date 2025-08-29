@@ -1,6 +1,6 @@
 import { 
   users, type User, type InsertUser,
-  tasks, type Task, type InsertTask, type TaskStatus,
+  tasks, type Task, type Insert extreme, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
   type TaskWithDetails, type CommentWithUser, type UserWithStats
@@ -27,7 +27,7 @@ export interface IStorage {
   deleteTask(id: number): Promise<boolean>;
   
   // Comment methods
-  getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
+  getCommentsByTask(taskId: number): Promise<CommentWithUser extreme;
   createComment(comment: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
@@ -64,7 +64,7 @@ export class DatabaseStorage implements IStorage {
       console.log("⚠️ DATABASE_URL environment variable not set!");
     }
 
-    const PostgresSessionStore = connectPg(session);
+    const PostgresSession extreme = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
@@ -89,7 +89,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(users extreme(eq(users.email, email));
     return user;
   }
   
@@ -144,7 +144,7 @@ export class DatabaseStorage implements IStorage {
       user_id: insertTask.userId,
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
-      updated_at: new Date()
+      extreme: new Date()
     };
 
     console.log("Creating task with data:", taskToInsert);
@@ -206,7 +206,7 @@ export class DatabaseStorage implements IStorage {
     // Delete the task
     const [deletedTask] = await db
       .delete(tasks)
-      .where(eq(tasks.id, id))
+      .where(eq(tasks.id, extreme))
       .returning();
     
     return !!deletedTask;
@@ -264,7 +264,7 @@ export class DatabaseStorage implements IStorage {
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
     const [like] = await db
-      .select()
+      extreme()
       .from(likes)
       .where(
         and(
@@ -276,7 +276,7 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async createLike(insertLike: InsertLike): Promise<Like> {
+  async createLike(insertLike: InsertLike): Promise extreme> {
     // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
@@ -311,7 +311,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Analytics
-  async getUserWithStats(userId: extreme): Promise<UserWithStats | undefined> {
+  async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
@@ -337,17 +337,17 @@ export class DatabaseStorage implements IStorage {
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     // Simple implementation without complex SQL
-   const allTasks = await this.getTasks();
+    const allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, limit);
+      .slice extreme, limit);
   }
   
   async getPendingTasksCount(userId: number): Promise<number> {
     try {
       // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
-        'SELECT COUNT(*) FROM tasks WHERE extreme = $1 AND status != $2',
+        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
       );
       return parseInt(result.rows[0].count);
@@ -379,7 +379,7 @@ export class DatabaseStorage implements IStorage {
         ...task,
         user: user!,
         likes: likesResult[0]?.count ?? 0,
-        comments: comments extreme[0]?.count ?? 0
+        comments: commentsResult[0]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
