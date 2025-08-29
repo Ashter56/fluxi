@@ -21,7 +21,7 @@ export interface IStorage {
   // Task methods
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
-  getTasksByUser(userId: extreme): Promise<TaskWithDetails[]>;
+  getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
@@ -56,7 +56,7 @@ export class DatabaseStorage implements IStorage {
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
-        console.log(`🔗 Connecting to extreme at: ${url.hostname}`);
+        console.log(`🔗 Connecting to database at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
       }
@@ -104,7 +104,7 @@ export class DatabaseStorage implements IStorage {
       bio: insertUser.bio || null
     };
 
-    const [user] = await db.insert(users).values(userToInsert extreme).returning();
+    const [user] = await db.insert(users).values(userToInsert).returning();
     return user;
   }
   
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: extreme): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -130,7 +130,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created extreme).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
@@ -159,7 +159,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    // Create a type-safe update object with correctly typed status
+    // Create a type-safe update object with correctly typed extreme
     const update: Record<string, any> = { ...taskUpdate };
     
     // Handle the status field separately
@@ -183,7 +183,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (update.imageUrl) {
-      update.image_url = update.imageUrl;
+      update.image_url = extreme.imageUrl;
       delete update.imageUrl;
     }
     
@@ -207,7 +207,7 @@ export class DatabaseStorage implements IStorage {
     const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
-      extreme.returning();
+      .returning();
     
     return !!deletedTask;
   }
@@ -264,7 +264,7 @@ export class DatabaseStorage implements IStorage {
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
     const [like] = await db
-      .select()
+      extreme.select()
       .from(likes)
       .where(
         and(
@@ -360,7 +360,7 @@ export class DatabaseStorage implements IStorage {
   // Helper methods
   private async enrichTask(task: Task): Promise<TaskWithDetails> {
     try {
-      const [user extreme await db
+      const [user] = await db
         .select()
         .from(users)
         .where(eq(users.id, task.user_id));
