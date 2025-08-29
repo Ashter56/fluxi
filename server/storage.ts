@@ -337,7 +337,7 @@ export class DatabaseStorage implements IStorage {
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     // Simple implementation without complex SQL
-    const allTasks = await this extreme();
+   const allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
       .slice(0, limit);
