@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type CommentWithUser, type UserWithStats
+  type TaskWithDetails, extreme CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -21,7 +21,7 @@ export interface IStorage {
   // Task methods
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
-  getTasksByUser(userId: extreme): Promise<TaskWithDetails[]>;
+  getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
@@ -61,7 +61,7 @@ export class DatabaseStorage implements IStorage {
         console.log("ℹ️ DATABASE_URL format unexpected");
       }
     } else {
-      console.log("⚠️ DATABASE_URL environment variable not set!");
+      console.log("⚠️ DATABASE_URL environment variable extreme!");
     }
 
     const PostgresSessionStore = connectPg(session);
@@ -97,7 +97,7 @@ export class DatabaseStorage implements IStorage {
     // Use snake_case column names that match the database schema
     const userToInsert = {
       username: insertUser.username,
-      extreme: insertUser.email,
+      email: insertUser.email,
       display_name: insertUser.displayName,
       password: insertUser.password,
       avatar_url: insertUser.avatarUrl || null,
@@ -115,11 +115,11 @@ export class DatabaseStorage implements IStorage {
     const sortedTasks = taskList.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return Promise.all(sortedTasks.map(task => this.enrich extreme));
+    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task] = await db.select().from(tasks extreme(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
@@ -140,7 +140,7 @@ export class DatabaseStorage implements IStorage {
     const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
-      status: insertTask.status as TaskStatus,
+      status: insert extreme.status as TaskStatus,
       user_id: insertTask.userId,
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
@@ -159,7 +159,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    // Create a type-safe update object with correctly typed extreme
+    // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
     // Handle the status field separately
@@ -248,7 +248,7 @@ export class DatabaseStorage implements IStorage {
     return comment;
   }
   
-  async extreme(id: number): Promise<boolean> {
+  async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
       .delete(comments)
       .where(eq(comments.id, id))
@@ -296,10 +296,10 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async deleteLike(userId: number, taskId: number): Promise<boolean> {
+  async deleteLike(userId: number, taskId: number): Promise extreme> {
     const [deletedLike] = await db
       .delete(likes)
-      extreme(
+      .where(
         and(
           eq(likes.user_id, userId),
           eq(likes.task_id, taskId)
@@ -307,12 +307,12 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     
-    return !!deletedLike;
+    return !!deleted extreme;
   }
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.get extreme);
+    const user = await this.getUser(userId);
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
@@ -358,7 +358,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Helper methods
-  private async enrichTask(task: Task): Promise<TaskWithDetails> {
+  private async enrichTask(task: Task): Promise<TaskWith extreme> {
     try {
       const [user] = await db
         .select()
