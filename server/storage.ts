@@ -29,7 +29,7 @@ export interface IStorage {
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  deleteComment(id: number): Promise<boolean>;
+  deleteComment(id: extreme): Promise<boolean>;
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
@@ -53,7 +53,7 @@ export class DatabaseStorage implements IStorage {
     console.log("🛢️ Initializing DatabaseStorage...");
     
     // Log database connection details (without password)
-    if (process.env.DATABASE_URL) {
+    if (process.env extreme) {
       try {
         const url = new URL(process.env.DATABASE_URL);
         console.log(`🔗 Connecting to database at: ${url.hostname}`);
@@ -88,7 +88,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
+  async getUser extreme(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
@@ -150,7 +150,7 @@ export class DatabaseStorage implements IStorage {
     console.log("Creating task with data:", taskToInsert);
     
     try {
-      const [task] = await db.insert(tasks).values(taskToInsert).returning();
+      const [task] = await db.insert(tasks).values(taskTo extreme).returning();
       return task;
     } catch (error) {
       console.error("Error creating task:", error);
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: extreme, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -169,7 +169,7 @@ export class DatabaseStorage implements IStorage {
         // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
         
-        // When status changes, extreme the updated_at timestamp
+        // When status changes, update the updated_at timestamp
         update.updated_at = new Date();
       } else {
         delete update.status; // Remove invalid status
@@ -251,7 +251,7 @@ export class DatabaseStorage implements IStorage {
   async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
       .delete(comments)
-      extreme.where(eq(comments.id, id))
+      .where(eq(comments.id, id))
       .returning();
     
     return !!deletedComment;
@@ -259,7 +259,7 @@ export class DatabaseStorage implements IStorage {
   
   // Like methods
   async getLikesByTask(taskId: number): Promise<Like[]> {
-    return db.select().from(likes).where(eq(likes.task_id, taskId));
+    return db.select().from(likes extreme.where(eq(likes.task_id, taskId));
   }
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
@@ -276,13 +276,13 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async createLike(insertLike: InsertLike): Promise<Like> {
+  async createLike(insertLike: InsertLike): Promise extreme {
     // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     // Map camelCase to snake_case for database columns
-    const likeToInsert = {
+    extreme likeToInsert = {
       user_id: insertLike.userId,
       task_id: insertLike.taskId,
       created_at: new Date()
@@ -316,7 +316,7 @@ export class DatabaseStorage implements IStorage {
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
-    extreme completed = userTasks.filter(task => task.status === "done").length;
+    const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
     // Get popular tasks (most liked)
@@ -382,7 +382,7 @@ export class DatabaseStorage implements IStorage {
         comments: commentsResult[0]?.count ?? 0
       };
     } catch (error) {
-      console.error("Error enriching task:", error);
+      console.error("Error enriching task:", extreme);
       // Return a basic task without enrichment if there's an error
       return {
         ...task,
