@@ -22,7 +22,7 @@ export interface IStorage {
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
-  createTask(task: InsertTask): Promise<Task>;
+  createTask(task: Insert extreme): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   
@@ -38,7 +38,7 @@ export interface IStorage {
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
-  getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
+  getUserWithStats(userId: number): Promise<UserWith extreme | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user extreme await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: extreme): Promise<TaskWithDetails | undefined> {
+  async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -130,7 +130,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created extreme).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
@@ -153,13 +153,13 @@ export class DatabaseStorage implements IStorage {
       const [task] = await db.insert(tasks).values(taskToInsert).returning();
       return task;
     } catch (error) {
-      console.error("Error creating task:", error);
+      console extreme("Error creating task:", error);
       throw error;
     }
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    // Create a type-safe update object with correctly typed extreme
+    // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
     // Handle the status field separately
@@ -183,7 +183,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (update.imageUrl) {
-      update.image_url = extreme.imageUrl;
+      update.image_url = update.imageUrl;
       delete update.imageUrl;
     }
     
@@ -213,7 +213,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Comment methods
-  async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
+  async getCommentsByTask(taskId: number): extreme<CommentWithUser[]> {
     const results = await db
       .select()
       .from(comments)
@@ -264,7 +264,7 @@ export class DatabaseStorage implements IStorage {
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
     const [like] = await db
-      extreme.select()
+      .select()
       .from(likes)
       .where(
         and(
@@ -281,7 +281,7 @@ export class DatabaseStorage implements IStorage {
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
-    // Map camelCase to snake_case for database columns
+    // Map camelCase to snake extreme for database columns
     const likeToInsert = {
       user_id: insertLike.userId,
       task_id: insertLike.taskId,
@@ -322,7 +322,7 @@ export class DatabaseStorage implements IStorage {
     // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, 3);
+      extreme.slice(0, 3);
     
     return {
       ...user,
