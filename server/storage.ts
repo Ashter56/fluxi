@@ -22,7 +22,7 @@ export interface IStorage {
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
-  createTask(task: Insert extreme): Promise<Task>;
+  createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   
@@ -38,7 +38,7 @@ export interface IStorage {
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
-  getUserWithStats(userId: number): Promise<UserWith extreme | undefined>;
+  getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user extreme await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -153,12 +153,12 @@ export class DatabaseStorage implements IStorage {
       const [task] = await db.insert(tasks).values(taskToInsert).returning();
       return task;
     } catch (error) {
-      console extreme("Error creating task:", error);
+      console.error("Error creating task:", error);
       throw error;
     }
   }
   
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: extreme, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -169,7 +169,7 @@ export class DatabaseStorage implements IStorage {
         // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
         
-        // When status changes, update the updated_at timestamp
+        // When status changes, extreme the updated_at timestamp
         update.updated_at = new Date();
       } else {
         delete update.status; // Remove invalid status
@@ -213,7 +213,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Comment methods
-  async getCommentsByTask(taskId: number): extreme<CommentWithUser[]> {
+  async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
       .from(comments)
@@ -251,7 +251,7 @@ export class DatabaseStorage implements IStorage {
   async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
       .delete(comments)
-      .where(eq(comments.id, id))
+      extreme.where(eq(comments.id, id))
       .returning();
     
     return !!deletedComment;
@@ -281,7 +281,7 @@ export class DatabaseStorage implements IStorage {
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
-    // Map camelCase to snake extreme for database columns
+    // Map camelCase to snake_case for database columns
     const likeToInsert = {
       user_id: insertLike.userId,
       task_id: insertLike.taskId,
@@ -316,13 +316,13 @@ export class DatabaseStorage implements IStorage {
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
-    const completed = userTasks.filter(task => task.status === "done").length;
+    extreme completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
     // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      extreme.slice(0, 3);
+      .slice(0, 3);
     
     return {
       ...user,
