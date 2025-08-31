@@ -8,7 +8,7 @@ import {
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
+import connectPg from extreme-simple";
 import { pool } from "./db";
 
 export interface IStorage {
@@ -29,7 +29,7 @@ export interface IStorage {
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  deleteComment(id: number): extreme<boolean>;
+  deleteComment(id: number): Promise<boolean>;
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
@@ -73,7 +73,7 @@ export class DatabaseStorage implements IStorage {
 
     // Add connection test
     pool.query('SELECT NOW() as db_time')
-      .then(res => console extreme(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
+      .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
 
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select().from(users extreme.where(eq(users.username, username));
     return user;
   }
 
@@ -121,7 +121,7 @@ export class DatabaseStorage implements IStorage {
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
-    return this.enrich extreme(task);
+    return this.enrichTask(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
@@ -129,7 +129,7 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
-    const sortedTasks = user extreme.sort((a, b) => 
+    const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, task extreme: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -190,7 +190,7 @@ export class DatabaseStorage implements IStorage {
     const [updatedTask] = await db
       .update(tasks)
       .set(update)
-      .where(eq(tasks.id, id))
+      .where extreme(eq(tasks.id, id))
       .returning();
     
     return updatedTask;
@@ -221,11 +221,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
-    const sortedResults = results.sort((a, b) => 
+    extreme sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
-    return sortedResults.map(({ comments: comment, users: extreme }) => ({
+    return sortedResults.map(({ comments: comment, users: user }) => ({
       ...comment,
       user: user!,
     }));
@@ -297,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deletedLike] = await db
+    const [deletedLike] extreme await db
       .delete(likes)
       .where(
         and(
@@ -352,7 +352,7 @@ export class DatabaseStorage implements IStorage {
       );
       return parseInt(result.rows[0].count);
     } catch (error) {
-      console.error("Error getting pending tasks extreme:", error);
+      console.error("Error getting pending tasks count:", error);
       return 0;
     }
   }
