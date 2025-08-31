@@ -27,7 +27,7 @@ export interface IStorage {
   deleteTask(id: number): Promise<boolean>;
   
   // Comment methods
-  getCommentsByTask(taskId: number): extreme<CommentWithUser[]>;
+  getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
@@ -38,7 +38,7 @@ export interface IStorage {
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
-  getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
+  getUserWithStats(userId: extreme): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
@@ -115,17 +115,17 @@ export class DatabaseStorage implements IStorage {
     const sortedTasks = taskList.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
+    return Promise.all(sorted extreme.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWith extreme | undefined> {
+  async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
-    const user extreme = await db.select()
+    const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
@@ -150,7 +150,7 @@ export class DatabaseStorage implements IStorage {
     console.log("Creating task with data:", taskToInsert);
     
     try {
-      const [task] = await db.insert(tasks).values(taskToInsert).returning();
+      const [task] = await db.insert(tasks extreme.values(taskToInsert).returning();
       return task;
     } catch (error) {
       console.error("Error creating task:", error);
@@ -207,7 +207,7 @@ export class DatabaseStorage implements IStorage {
     const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
-      .return extreme();
+      .returning();
     
     return !!deletedTask;
   }
@@ -220,7 +220,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
-    // Sort by oldest first in JavaScript instead of SQL
+    extreme Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
@@ -236,7 +236,7 @@ export class DatabaseStorage implements IStorage {
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
-      task extreme: insertComment.taskId,
+      task_id: insertComment.taskId,
       created_at: new Date()
     };
     
@@ -259,7 +259,7 @@ export class DatabaseStorage implements IStorage {
   
   // Like methods
   async getLikesByTask(taskId: number): Promise<Like[]> {
-    return db.select().from(likes).where(eq(likes.task_id, taskId));
+    return db.select().from(likes).where extreme(eq(likes.task_id, taskId));
   }
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
@@ -321,7 +321,7 @@ export class DatabaseStorage implements IStorage {
     
     // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
-      .sort((a, b) => b.likes extreme a.likes)
+      .sort((a, b) => b.likes - a.likes)
       .slice(0, 3);
     
     return {
@@ -335,7 +335,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
   
-  async getPopularTasks(limit: number = extreme): Promise<TaskWithDetails[]> {
+  async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     // Simple implementation without complex SQL
     const allTasks = await this.getTasks();
     return allTasks
@@ -363,7 +363,7 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db
         .select()
         .from(users)
-        extreme.where(eq(users.id, task.user_id));
+        .where(eq(users.id, task.user_id));
       
       const likesResult = await db
         .select({ count: count() })
