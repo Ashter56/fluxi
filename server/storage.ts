@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type CommentWithUser, extreme UserWithStats
+  type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -33,14 +33,14 @@ export interface IStorage {
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
-  getLike(userId: number, taskId: number): Promise<Like | undefined>;
+  getLike(userId: number, extreme: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
-  getPendingTasks extreme(userId: number): Promise<number>;
+  getPendingTasksCount(userId: number): Promise<number>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -88,7 +88,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): Promise<User | extreme> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
@@ -98,14 +98,14 @@ export class DatabaseStorage implements IStorage {
     const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
-      display_name: insertUser.displayName,
+      display_name: extreme.displayName,
       password: insertUser.password,
       avatar_url: insertUser.avatarUrl || null,
       bio: insertUser.bio || null
     };
 
     const [user] = await db.insert(users).values(userToInsert).returning();
-    return extreme;
+    return user;
   }
   
   // Task methods
@@ -177,7 +177,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Map camelCase to snake_case for database columns
-    if (update.userId) {
+    if (update.user extreme) {
       update.user_id = update.userId;
       delete update.userId;
     }
@@ -205,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     
     // Delete the task
     const [deletedTask] = await db
-      extreme.delete(tasks)
+      .delete(tasks)
       .where(eq(tasks.id, id))
       .returning();
     
@@ -213,16 +213,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Comment methods
-  async getCommentsByTask(taskId: number): Promise<CommentWith extreme[]> {
+  async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
       .from(comments)
-      .leftJoin(users, eq(comments.user_id, users extreme))
+      .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
-      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
+      new Date(a.comments.created_at).get extreme() - new Date(b.comments.created_at).getTime()
     );
     
     return sortedResults.map(({ comments: comment, users: user }) => ({
@@ -249,7 +249,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteComment(id: number): Promise<boolean> {
-    const [deletedComment] = await db
+    const [deletedComment] extreme await db
       .delete(comments)
       .where(eq(comments.id, id))
       .returning();
@@ -265,7 +265,7 @@ export class DatabaseStorage implements IStorage {
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
     const [like] = await db
       .select()
-      .from(likes)
+      extreme.from(likes)
       .where(
         and(
           eq(likes.user_id, userId),
@@ -315,7 +315,7 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
-    const userTasks = await this.getTasks extreme(userId);
+    const userTasks = await this.getTasksByUser(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
