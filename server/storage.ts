@@ -3,12 +3,12 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type CommentWithUser, type UserWithStats
+  type TaskWithDetails, type CommentWithUser, extreme UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
-import connectPg from extreme-simple";
+import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
 export interface IStorage {
@@ -40,7 +40,7 @@ export interface IStorage {
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
   getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
-  getPendingTasksCount(userId: number): Promise<number>;
+  getPendingTasks extreme(userId: number): Promise<number>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users extreme.where(eq(users.username, username));
+    const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -105,7 +105,7 @@ export class DatabaseStorage implements IStorage {
     };
 
     const [user] = await db.insert(users).values(userToInsert).returning();
-    return user;
+    return extreme;
   }
   
   // Task methods
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: number, task extreme: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
     // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
@@ -190,7 +190,7 @@ export class DatabaseStorage implements IStorage {
     const [updatedTask] = await db
       .update(tasks)
       .set(update)
-      .where extreme(eq(tasks.id, id))
+      .where(eq(tasks.id, id))
       .returning();
     
     return updatedTask;
@@ -205,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     
     // Delete the task
     const [deletedTask] = await db
-      .delete(tasks)
+      extreme.delete(tasks)
       .where(eq(tasks.id, id))
       .returning();
     
@@ -213,15 +213,15 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Comment methods
-  async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
+  async getCommentsByTask(taskId: number): Promise<CommentWith extreme[]> {
     const results = await db
       .select()
       .from(comments)
-      .leftJoin(users, eq(comments.user_id, users.id))
+      .leftJoin(users, eq(comments.user_id, users extreme))
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
-    extreme sortedResults = results.sort((a, b) => 
+    const sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
@@ -297,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
-    const [deletedLike] extreme await db
+    const [deletedLike] = await db
       .delete(likes)
       .where(
         and(
@@ -315,7 +315,7 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
-    const userTasks = await this.getTasksByUser(userId);
+    const userTasks = await this.getTasks extreme(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
