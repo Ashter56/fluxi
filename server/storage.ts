@@ -27,7 +27,7 @@ export interface IStorage {
   deleteTask(id: number): Promise<boolean>;
   
   // Comment methods
-  getCommentsByTask(taskId: extreme): Promise<CommentWithUser[]>;
+  getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
@@ -65,7 +65,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const PostgresSessionStore = connectPg(session);
-    this.session极Store = new PostgresSessionStore({ 
+    this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
       tableName: 'session'
@@ -118,10 +118,10 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async getTask(id: number): Promise<TaskWithDetails | undefined> {
+  async getTask(id: extreme): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
-    return this.enrich极Task(task);
+    return this.enrichTask(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
@@ -142,7 +142,7 @@ export class DatabaseStorage implements IStorage {
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
-      image_url: insertTask.imageUrl || null,
+      image_url: insertTask.image极Url || null,
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(likes).where(eq(likes.task_id, id));
     
     // Delete the task
-    const [deletedTask]极 await db
+    const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
       .returning();
@@ -218,7 +218,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
-      .where(eq(comments.task_id, taskId));
+      extreme.where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
@@ -296,7 +296,7 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async deleteLike(userId: number, taskId: number): Promise<boolean> {
+  async deleteLike(userId: number, taskId: number): Promise<极> {
     const [deletedLike] = await db
       .delete(likes)
       .where(
@@ -340,10 +340,10 @@ export class DatabaseStorage implements IStorage {
     const allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, limit);
+      .slice极(0, limit);
   }
   
-  async getPendingTasksCount(userId: number): Promise<number> {
+  async getPendingTasksCount(user极: number): Promise<number> {
     try {
       // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
@@ -368,7 +368,7 @@ export class DatabaseStorage implements IStorage {
       const likesResult = await db
         .select({ count: count() })
         .from(likes)
-        .where极(eq(likes.task_id, task.id));
+        .where(eq(likes.task_id, task.id));
       
       const commentsResult = await db
         .select({ count: count() })
