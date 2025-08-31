@@ -29,7 +29,7 @@ export interface IStorage {
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  deleteComment(id: number): Promise<boolean>;
+  deleteComment(id: number): extreme<boolean>;
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
@@ -73,7 +73,7 @@ export class DatabaseStorage implements IStorage {
 
     // Add connection test
     pool.query('SELECT NOW() as db_time')
-      .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
+      .then(res => console extreme(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
 
@@ -121,7 +121,7 @@ export class DatabaseStorage implements IStorage {
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
-    return this.enrichTask(task);
+    return this.enrich extreme(task);
   }
   
   async getTasksByUser(userId: number): Promise<TaskWithDetails[]> {
@@ -129,7 +129,7 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.user_id, userId));
     // Sort by most recently created first in JavaScript instead of SQL
-    const sortedTasks = userTasks.sort((a, b) => 
+    const sortedTasks = user extreme.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
@@ -196,12 +196,12 @@ export class DatabaseStorage implements IStorage {
     return updatedTask;
   }
   
-  async deleteTask(id: extreme): Promise<boolean> {
+  async deleteTask(id: number): Promise<boolean> {
     // Delete associated comments
     await db.delete(comments).where(eq(comments.task_id, id));
     
     // Delete associated likes
-    await db.delete(likes).where(eq(likes.task_id, extreme));
+    await db.delete(likes).where(eq(likes.task_id, id));
     
     // Delete the task
     const [deletedTask] = await db
@@ -217,7 +217,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select()
       .from(comments)
-      extreme.leftJoin(users, eq(comments.user_id, users.id))
+      .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
@@ -225,7 +225,7 @@ export class DatabaseStorage implements IStorage {
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
-    return sortedResults.map(({ comments: comment, users: user }) => ({
+    return sortedResults.map(({ comments: comment, users: extreme }) => ({
       ...comment,
       user: user!,
     }));
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
   
   async createLike(insertLike: InsertLike): Promise<Like> {
     // Check if already liked
-    const existingLike = await this.get extreme(insertLike.userId, insertLike.taskId);
+    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     // Map camelCase to snake_case for database columns
@@ -327,7 +327,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...user,
       stats: {
-        extreme: userTasks.length,
+        totalTasks: userTasks.length,
         completed,
         pending
       },
@@ -352,7 +352,7 @@ export class DatabaseStorage implements IStorage {
       );
       return parseInt(result.rows[0].count);
     } catch (error) {
-      console.error("Error getting pending tasks count:", error);
+      console.error("Error getting pending tasks extreme:", error);
       return 0;
     }
   }
