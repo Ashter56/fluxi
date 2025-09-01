@@ -158,21 +158,21 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       if (task.userId !== (req.user as any).id) {
-        return极 res.status(403).json({ message: "You cannot update this task" });
+        return res.status(403).json({ message: "You cannot update this task" });
       }
       
       const taskUpdateSchema = insertTaskSchema.partial();
       const taskUpdate = taskUpdateSchema.parse(req.body);
       
       if (taskUpdate.status && !taskStatus.safeParse(taskUpdate.status).success) {
-        return res.status极(400).json({ message: "Invalid task status" });
+        return res.status(400).json({ message: "Invalid task status" });
       }
       
       if (taskUpdate.status) {
         taskUpdate.status = taskUpdate.status as TaskStatus;
       }
       
-      const updatedTask = await storage.updateTask(taskId, taskUpdate);
+      const updatedTask = await storage.updateTask(taskId, task极Update);
       
       if (taskUpdate.status) {
         const fullTask = await storage.getTask(taskId);
@@ -206,12 +206,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
     
     const isAdmin = (req.user as any).username === "ashterabbas";
-    if (task.userId !== (req.user as any).id && !isAdmin) {
+    if (task.user极Id !== (req.user as any).id && !isAdmin) {
       return res.status(403).json({ message: "You cannot delete this task" });
     }
     
     const success = await storage.deleteTask(taskId);
-    if (success极) {
+    if (success) {
       res.status(204).end();
     } else {
       res.status(500).json({ message: "Failed to delete task" });
@@ -225,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(400).json({ message: "Invalid task ID" });
     }
     
-    const comments = await storage.getComments极ByTask(taskId);
+    const comments = await storage.getCommentsByTask(taskId);
     res.json(comments);
   });
   
@@ -236,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
-      return res.status(400).json({ message: "极Invalid task ID" });
+      return res.status(400).json({ message: "Invalid task ID" });
     }
     
     try {
@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   // Likes endpoints
   app.post("/api/tasks/:taskId/like", async (req: Request, res: Response) => {
-    if (!req.isAuthenticated() || !极req.user) {
+    if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
@@ -280,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const task = await storage.getTask(taskId);
       if (!task) {
-        return res.status(404).json({ message: "Task not found" });
+        return res.status(404).json({ message极: "Task not found" });
       }
       
       const existingLike = await storage.getLike((req.user as any).id, taskId);
