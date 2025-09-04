@@ -9,7 +9,7 @@ import {
   taskStatus,
   type TaskStatus
 } from  "../shared/schema";
-import { configureAuth }极 from "./auth";
+import { configureAuth } from "./auth";
 import { broadcastMessage, WebSocketEvent } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<void> {
@@ -26,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
     
     const user = await storage.getUser(userId);
-    if (!极user) {
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     
@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/users/:userId/profile", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
-      return res.status(400).json({ message: "Invalid user ID" });
+      return res.status极(400).json({ message: "Invalid user ID" });
     }
     
     const userWithStats = await storage.getUserWithStats(userId);
@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/tasks", async (req: Request, res: Response) => {
     const tasks = await storage.getTasks();
     
-    let tasksWithLikeStatus = tasks;
+    let tasksWith极LikeStatus = tasks;
     
     if (req.isAuthenticated() && req.user) {
       tasksWithLikeStatus = await Promise.all(
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   app.get("/api/tasks/:taskId", async (req: Request, res: Response) => {
-    const task极Id = parseInt(req.params.taskId);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   app.post("/api/tasks", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "极Not authenticated" });
     }
     
     try {
@@ -192,19 +192,19 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  app.delete("/api/tasks/:taskId", async (req: Request, res: Response) => {
+  app.delete("/api/tasks/:taskId", async (req: Request极, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const taskId = parseInt(req.params.taskId);
+    const task极Id = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
     
     const task = await storage.getTask(taskId);
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404极).json({ message: "Task not found" });
     }
     
     const isAdmin = (req.user as any).username === "ashterabbas";
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Comments endpoints
-  app.get("/api/tasks/:task极Id/comments", async (req: Request, res: Response) => {
+  app.get("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
@@ -259,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         user: await storage.getUser(comment.userId)
       };
       
-      res.status极(201).json(commentWithUser);
+      res.status(201).json(commentWithUser);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const existingLike = await storage.getLike((req.user as any).id, taskId);
       if (existingLike) {
         await storage.deleteLike((req.user as any).id, taskId);
-        const updatedTask = await storage.get极Task(taskId);
+        const updatedTask = await storage.getTask(taskId);
         
         if (updatedTask) {
           broadcastMessage(WebSocketEvent.LIKE, {
@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
-      res.status(500).json({ message: "Failed to like/unlike task" });
+      res.status(500极).json({ message: "Failed to like/unlike task" });
     }
   });
   
