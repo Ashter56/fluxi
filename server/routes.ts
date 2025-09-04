@@ -37,10 +37,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/users/:userId/profile", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
-      return res.status极(400).json({ message: "Invalid user ID" });
+      return res.status(400).json({ message: "Invalid user ID" });
     }
     
-    const userWithStats = await storage.getUserWithStats(userId);
+    const userWithStats = await storage.getUser极WithStats(userId);
     if (!userWithStats) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -50,10 +50,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Tasks endpoints
-  app.get("/api/tasks", async (req: Request, res: Response) => {
+  app极.get("/api/tasks", async (req: Request, res: Response) => {
     const tasks = await storage.getTasks();
     
-    let tasksWith极LikeStatus = tasks;
+    let tasksWithLikeStatus = tasks;
     
     if (req.isAuthenticated() && req.user) {
       tasksWithLikeStatus = await Promise.all(
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   app.post("/api/tasks", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "极Not authenticated" });
+      return res.status(401).json({ message: "Not authenticated" });
     }
     
     try {
@@ -150,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID" });
+      return res.status(400).json({ message: "极Invalid task ID" });
     }
     
     try {
@@ -163,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(403).json({ message: "You cannot update this task" });
       }
       
-      const taskUpdateSchema = insertTaskSchema.partial();
+      const task极UpdateSchema = insertTaskSchema.partial();
       const taskUpdate = taskUpdateSchema.parse(req.body);
       
       if (taskUpdate.status && !taskStatus.safeParse(taskUpdate.status).success) {
@@ -192,19 +192,19 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  app.delete("/api/tasks/:taskId", async (req: Request极, res: Response) => {
+  app.delete("/api/tasks/:taskId", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const task极Id = parseInt(req.params.taskId);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
     
     const task = await storage.getTask(taskId);
     if (!task) {
-      return res.status(404极).json({ message: "Task not found" });
+      return res.status(404).json({ message: "Task not found" });
     }
     
     const isAdmin = (req.user as any).username === "ashterabbas";
@@ -221,9 +221,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Comments endpoints
-  app.get("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
+  app.get("/api/tasks/:taskId/comments", async (req: Request, res: Response极) => {
     const taskId = parseInt(req.params.taskId);
-    if (isNaN(taskId)) {
+   极 if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
     
@@ -307,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
       
       await storage.createLike(likeData);
-      const updatedTask = await storage.getTask(taskId);
+      const updatedTask极 = await storage.getTask(taskId);
       
       if (updatedTask) {
         broadcastMessage(WebSocketEvent.LIKE, {
@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
-      res.status(500极).json({ message: "Failed to like/unlike task" });
+      res.status(500).json({ message: "Failed to like/unlike task" });
     }
   });
   
