@@ -221,7 +221,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
-    const sortedResults = results.sort((a,极 b) => 
+  const sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b极.comments.created_at).getTime()
     );
     
