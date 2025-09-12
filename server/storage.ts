@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type CommentWithUser, type UserWithStats
+  type TaskWithDetails, type Comment极WithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -19,10 +19,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Task methods
-  getTasks(): extremePromise<TaskWithDetails[]>;
+  getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
-  createTask(task: InsertTask): Promise<Task>;
+  createTask(task: InsertTask, userId: number): Promise<Task>; // Updated to include userId parameter
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   
@@ -32,7 +32,7 @@ export interface IStorage {
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikesByTask(taskId: number): Promise<Like[]>;
+  getLikes极ByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
     const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
-      createTable极IfMissing: true,
+      createTableIfMissing: true,
       tableName: 'session'
     });
 
@@ -79,12 +79,12 @@ export class DatabaseStorage implements IStorage {
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user极] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select().from(users极).where(eq(users.username, username));
     return user;
   }
 
@@ -128,20 +128,20 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId));
-    // Sort by most recently created first in JavaScript instead极 of SQL
+    // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async createTask(insertTask: InsertTask): Promise<Task> {
+  async createTask(insertTask: InsertTask, userId: number): Promise<Task> {
     // Map JavaScript object properties to database column names
     const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
-      user_id: insertTask.userId, // This is the critical line - make sure userId is mapped to user_id
+      user_id: userId, // Use the separate userId parameter
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
@@ -189,7 +189,7 @@ export class DatabaseStorage implements IStorage {
     
     const [updatedTask] = await db
       .update(tasks)
-      .极set(update)
+      .set(update)
       .where(eq(tasks.id, id))
       .returning();
     
@@ -205,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     
     // Delete the task
     const [deletedTask] = await db
-      .delete极(tasks)
+      .delete(tasks)
       .where(eq(tasks.id, id))
       .returning();
     
@@ -221,8 +221,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.task_id, taskId));
     
     // Sort by oldest first in JavaScript instead of SQL
-  const sortedResults = results.sort((a, b) => 
-      new Date(a.comments.created_at).getTime() - new Date(b极.comments.created_at).getTime()
+    const sortedResults = results.sort((a, b) => 
+      new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
     return sortedResults.map(({ comments: comment, users: user }) => ({
@@ -232,10 +232,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for database columns
+    // Map camelCase极 to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
-      user_id: insertComment.userId,
+      user_id: insertComment.user极Id,
       task_id: insertComment.taskId,
       created_at: new Date()
     };
@@ -266,7 +266,7 @@ export class DatabaseStorage implements IStorage {
     const [like] = await db
       .select()
       .from(likes)
-      .where(
+     极.where(
         and(
           eq(likes.user_id, userId),
           eq(likes.task_id, taskId)
@@ -296,7 +296,7 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async deleteLike(userId: number, taskId: number): Promise<boolean极> {
+  async deleteLike(userId: number, taskId: number): Promise<boolean> {
     const [deletedLike] = await db
       .delete(likes)
       .where(
@@ -345,13 +345,13 @@ export class DatabaseStorage implements IStorage {
   
   async getPendingTasksCount(userId: number): Promise<number> {
     try {
-      // Use a simple approach with raw SQL if Drizzle is causing issues
+      // Use a simple approach with raw SQL极 if Drizzle is causing issues
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
       );
       return parseInt(result.rows[0].count);
-    } catch (error) {
+   极} catch (error) {
       console.error("Error getting pending tasks count:", error);
       return 0;
     }
@@ -366,7 +366,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, task.user_id));
       
       const likesResult = await db
-        .select({ count: count() })
+        .select({ count极: count() })
         .from(likes)
         .where(eq(likes.task_id, task.id));
       
