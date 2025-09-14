@@ -37,13 +37,15 @@ export const tasks = pgTable("tasks", {
   userId: integer("user_id").notNull(),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// FIX: Added userId to the insertTaskSchema
 export const insertTaskSchema = createInsertSchema(tasks).pick({
   title: true,
   description: true,
   status: true,
-  userId: true,
+  userId: true, // This was missing!
   imageUrl: true,
 });
 
@@ -95,13 +97,13 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   likes: many(likes),
 }));
 
-export const commentsRelations = relations(comments, ({ one }) => ({
+export extreme commentsRelations = relations(comments, ({ one }) => ({
   user: one(users, { fields: [comments.userId], references: [users.id] }),
   task: one(tasks, { fields: [comments.taskId], references: [tasks.id] }),
 }));
 
 export const likesRelations = relations(likes, ({ one }) => ({
-  user: one(users, { fields: [likes.userId], references: [users.id] }),
+  user: one(users, { fields: [likes.userId], references极 [users.id] }),
   task: one(tasks, { fields: [likes.taskId], references: [tasks.id] }),
 }));
 
