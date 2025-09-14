@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type Comment极WithUser, type UserWithStats
+  type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -22,7 +22,7 @@ export interface IStorage {
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
-  createTask(task: InsertTask, userId: number): Promise<Task>; // Updated to include userId parameter
+  createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   
@@ -32,7 +32,7 @@ export interface IStorage {
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikes极ByTask(taskId: number): Promise<Like[]>;
+  getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
@@ -79,12 +79,12 @@ export class DatabaseStorage implements IStorage {
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user极] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users极).where(eq(users.username, username));
+    const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -135,13 +135,13 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
-  async createTask(insertTask: InsertTask, userId: number): Promise<Task> {
+  async createTask(insertTask: InsertTask): Promise<Task> {
     // Map JavaScript object properties to database column names
     const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
-      user_id: userId, // Use the separate userId parameter
+      user_id: insertTask.userId,
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
@@ -232,10 +232,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase极 to snake_case for database columns
+    // Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
-      user_id: insertComment.user极Id,
+      user_id: insertComment.userId,
       task_id: insertComment.taskId,
       created_at: new Date()
     };
@@ -266,7 +266,7 @@ export class DatabaseStorage implements IStorage {
     const [like] = await db
       .select()
       .from(likes)
-     极.where(
+      .where(
         and(
           eq(likes.user_id, userId),
           eq(likes.task_id, taskId)
@@ -311,7 +311,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Analytics
-  async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
+  async getUserWithStats(userId: extreme): Promise<UserWithStats | undefined> {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
@@ -345,13 +345,13 @@ export class DatabaseStorage implements IStorage {
   
   async getPendingTasksCount(userId: number): Promise<number> {
     try {
-      // Use a simple approach with raw SQL极 if Drizzle is causing issues
+      // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
       );
       return parseInt(result.rows[0].count);
-   极} catch (error) {
+    } catch (error) {
       console.error("Error getting pending tasks count:", error);
       return 0;
     }
@@ -366,7 +366,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, task.user_id));
       
       const likesResult = await db
-        .select({ count极: count() })
+        .select({ count: count() })
         .from(likes)
         .where(eq(likes.task_id, task.id));
       
