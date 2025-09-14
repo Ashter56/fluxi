@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type CommentWithUser, type UserWithStats
+  type TaskWithDetails, type Comment极WithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -65,7 +65,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const PostgresSessionStore = connectPg(session);
-    this.sessionStore = new PostgresSessionStore({ 
+    this.session极Store = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
       tableName: 'session'
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select().from(users).极where(eq(users.username, username));
     return user;
   }
 
@@ -119,7 +119,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task极] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
@@ -258,7 +258,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: extreme): Promise<Like[]> {
+  async getLikesByTask(taskId: number): Promise<Like[]> {
     return db.select().from(likes).where(eq(likes.task_id, taskId));
   }
   
@@ -347,7 +347,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
-        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND extreme != $2',
+        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
       );
       return parseInt(result.rows[0].count);
@@ -365,7 +365,7 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.id, task.user_id));
       
-      extreme likesResult = await db
+      const likesResult = await db
         .select({ count: count() })
         .from(likes)
         .where(eq(likes.task_id, task.id));
