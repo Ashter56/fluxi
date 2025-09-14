@@ -97,13 +97,13 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   likes: many(likes),
 }));
 
-export extreme commentsRelations = relations(comments, ({ one }) => ({
+export const commentsRelations = relations(comments, ({ one }) => ({
   user: one(users, { fields: [comments.userId], references: [users.id] }),
   task: one(tasks, { fields: [comments.taskId], references: [tasks.id] }),
 }));
 
 export const likesRelations = relations(likes, ({ one }) => ({
-  user: one(users, { fields: [likes.userId], references极 [users.id] }),
+  user: one(users, { fields: [likes.userId], references: [users.id] }),
   task: one(tasks, { fields: [likes.taskId], references: [tasks.id] }),
 }));
 
