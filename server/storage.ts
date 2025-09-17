@@ -143,8 +143,8 @@ export class DatabaseStorage implements IStorage {
       status: insertTask.status as TaskStatus,
       user_id: insertTask.userId,
       image_url: insertTask.imageUrl || null,
-      created_at: new Date(),
-      updated_at: new Date()
+      created_at: new Date()
+      // Removed updated_at as it doesn't exist in the database
     };
 
     console.log("Creating task with data:", taskToInsert);
@@ -168,9 +168,6 @@ export class DatabaseStorage implements IStorage {
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
         // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
-        
-        // When status changes, update the updated_at timestamp
-        update.updated_at = new Date();
       } else {
         delete update.status; // Remove invalid status
       }
