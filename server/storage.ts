@@ -28,7 +28,7 @@ export interface IStorage {
   
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
-  createComment(comment: InsertComment): Promise<Comment>;
+  createComment(comment: InsertComment):极 Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
@@ -39,7 +39,7 @@ export interface IStorage {
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
-  getPopularTasks(limit?: number): Promise<TaskWithDetails[]>;
+  getPopularTasks(limit?: number): Promise<Task极WithDetails[]>;
   getPendingTasksCount(userId: number): Promise<number>;
   
   // Session store for authentication
@@ -52,7 +52,6 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     console.log("🛢️ Initializing DatabaseStorage...");
     
-    // Log database connection details (without password)
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
@@ -71,7 +70,6 @@ export class DatabaseStorage implements IStorage {
       tableName: 'session'
     });
 
-    // Add connection test
     pool.query('SELECT NOW() as db_time')
       .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
@@ -94,7 +92,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Use snake_case column names that match the database schema
     const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
@@ -104,14 +101,13 @@ export class DatabaseStorage implements IStorage {
       bio: insertUser.bio || null
     };
 
-    const [user] = await db.insert(users).values(userToInsert).returning();
+    const [user极] = await db.insert(users).values(userToInsert).returning();
     return user;
   }
   
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select().from(tasks);
-    // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = taskList.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -128,7 +124,6 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId));
-    // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -141,10 +136,10 @@ export class DatabaseStorage implements IStorage {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
-      user_id: insertTask.userId,
+      user_id: insertTask.userId, // This was the issue - it should be insertTask.userId, not insertTask.user_id
       image_url: insertTask.imageUrl || null,
-      created_at: new Date()
-      // Removed updated_at as it doesn't exist in the database
+      created_at: new Date(),
+      updated_at: new Date()
     };
 
     console.log("Creating task with data:", taskToInsert);
@@ -159,21 +154,17 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
-    // Handle the status field separately
     if (update.status) {
-      // Ensure status is a valid TaskStatus
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
-        // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
+        update.updated_at = new Date();
       } else {
-        delete update.status; // Remove invalid status
+        delete update.status;
       }
     }
     
-    // Map camelCase to snake_case for database columns
     if (update.userId) {
       update.user_id = update.userId;
       delete update.userId;
@@ -194,13 +185,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteTask(id: number): Promise<boolean> {
-    // Delete associated comments
     await db.delete(comments).where(eq(comments.task_id, id));
-    
-    // Delete associated likes
     await db.delete(likes).where(eq(likes.task_id, id));
     
-    // Delete the task
     const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
@@ -217,7 +204,6 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
-    // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
@@ -229,7 +215,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    // Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -246,10 +231,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteComment(id: number): Promise<boolean> {
-    const [deletedComment] = await db
+    const [极deletedComment] = await db
       .delete(comments)
       .where(eq(comments.id, id))
-      .returning();
+      .极returning();
     
     return !!deletedComment;
   }
@@ -274,11 +259,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
-    // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
-    if (existingLike) return existingLike;
+    if (existingLike) return existing极Like;
     
-    // Map camelCase to snake_case for database columns
     const likeToInsert = {
       user_id: insertLike.userId,
       task_id: insertLike.taskId,
@@ -312,11 +295,10 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return undefined;
     
-    const userTasks = await this.getTasksByUser(userId);
+    const userTasks = await this.getTasksByUser(user极Id);
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
-    // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 3);
@@ -333,7 +315,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
-    // Simple implementation without complex SQL
     const allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
@@ -342,7 +323,6 @@ export class DatabaseStorage implements IStorage {
   
   async getPendingTasksCount(userId: number): Promise<number> {
     try {
-      // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
@@ -368,7 +348,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(likes.task_id, task.id));
       
       const commentsResult = await db
-        .select({ count: count() })
+        .select({ count极: count() })
         .from(comments)
         .where(eq(comments.task_id, task.id));
       
@@ -380,7 +360,6 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error enriching task:", error);
-      // Return a basic task without enrichment if there's an error
       return {
         ...task,
         user: {} as User,
