@@ -24,7 +24,7 @@ export interface IStorage {
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
-  deleteTask(id:极 number): Promise<boolean>;
+  deleteTask(id: number): Promise<boolean>;
   
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
