@@ -56,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     let tasksWithLikeStatus = tasks;
     
     if (req.isAuthenticated() && req.user) {
-      tasksWith极Status = await Promise.all(
+      tasksWithLikeStatus = await Promise.all(
         tasks.map(async (task) => {
           const liked = await storage.getLike((req.user as any).id, task.id);
           return { ...task, liked: !!liked };
