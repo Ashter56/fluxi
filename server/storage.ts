@@ -28,7 +28,7 @@ export interface IStorage {
   
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
-  createComment(comment: InsertComment):极 Promise<Comment>;
+  createComment(comment: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
