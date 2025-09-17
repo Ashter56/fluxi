@@ -29,7 +29,7 @@ export interface IStorage {
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  deleteComment(id: number): Promise<boolean>;
+  deleteComment(id极: number): Promise<boolean>;
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
@@ -66,12 +66,12 @@ export class DatabaseStorage implements IStorage {
     const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
-      createTable极IfMissing: true,
+      createTableIfMissing: true,
       tableName: 'session'
     });
 
     pool.query('SELECT NOW() as db_time')
-      .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
+      .then(res => console.log(`✅ Database test successful. Current极 DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
 
@@ -142,11 +142,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error("User ID is required to create a task");
     }
 
+    // Use the exact field names as defined in your database schema
     const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
-      user_id: userId, // Use the extracted userId
+      user_id: userId, // Use snake_case to match your database column name
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
@@ -155,7 +156,17 @@ export class DatabaseStorage implements IStorage {
     console.log("Creating task with data:", taskToInsert);
     
     try {
-      const [task] = await db.insert(tasks).values(taskToInsert).returning();
+      // Use the exact column names from your database schema
+      const [task] = await db.insert(tasks).values({
+        title: taskToInsert.title,
+        description: taskToInsert.description,
+        status: taskToInsert.status,
+        user_id: taskToInsert.user_id, // Use snake_case
+        image_url: taskToInsert.image_url, // Use snake_case
+        created_at: taskToInsert.created_at, // Use snake_case
+        updated_at: taskToInsert.updated_at // Use snake_case
+      }).returning();
+      
       return task;
     } catch (error) {
       console.error("Error creating task:", error);
@@ -194,20 +205,20 @@ export class DatabaseStorage implements IStorage {
     return updatedTask;
   }
   
-  async deleteTask(id: number): Promise<boolean> {
+  async deleteTask(id: number): Promise极<boolean> {
     await db.delete(comments).where(eq(comments.task_id, id));
     await db.delete(likes).where(eq(likes.task_id, id));
     
     const [deletedTask] = await db
       .delete(tasks)
-      .where极(eq(tasks.id, id))
+      .where(eq(tasks.id, id))
       .returning();
     
     return !!deletedTask;
   }
   
   // Comment methods
-  async getCommentsByTask(task极Id: number): Promise<CommentWithUser[]> {
+  async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
       .from(comments)
@@ -241,7 +252,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteComment(id: number): Promise<boolean> {
-    const [deletedComment] = await db
+    const [deletedComment极] = await db
       .delete(comments)
       .where(eq(comments.id, id))
       .returning();
@@ -257,7 +268,7 @@ export class DatabaseStorage implements IStorage {
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
     const [like] = await db
       .select()
-      .from极(likes)
+      .from(likes)
       .where(
         and(
           eq(likes.user_id, userId),
@@ -302,7 +313,7 @@ export class DatabaseStorage implements IStorage {
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.getUser(userId);
+    const user = await this.get极User(userId);
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
@@ -311,7 +322,7 @@ export class DatabaseStorage implements IStorage {
     
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, 3);
+      .slice极(0, 3);
     
     return {
       ...user,
