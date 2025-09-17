@@ -29,10 +29,10 @@ export interface IStorage {
   // Comment methods
   getCommentsByTask(taskId: number): Promise<CommentWithUser[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  deleteComment(id极: number): Promise<boolean>;
+  deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikesByTask(taskId: number): Promise<Like[]>;
+  getLikes极ByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
@@ -71,7 +71,7 @@ export class DatabaseStorage implements IStorage {
     });
 
     pool.query('SELECT NOW() as db_time')
-      .then(res => console.log(`✅ Database test successful. Current极 DB time: ${res.rows[0].db_time}`))
+      .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
 
@@ -115,7 +115,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task] = await db.select().from(tasks).where极(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
@@ -131,40 +131,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
-    // Log the incoming task data to debug the issue
-    console.log("InsertTask received:", insertTask);
-    
-    // Ensure userId is properly extracted
-    const userId = insertTask.userId;
-    console.log("Extracted userId:", userId);
-    
-    if (!userId) {
-      throw new Error("User ID is required to create a task");
-    }
-
-    // Use the exact field names as defined in your database schema
-    const taskToInsert = {
-      title: insertTask.title,
-      description: insertTask.description,
-      status: insertTask.status as TaskStatus,
-      user_id: userId, // Use snake_case to match your database column name
-      image_url: insertTask.imageUrl || null,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    console.log("Creating task with data:", taskToInsert);
-    
+    // Use Drizzle's built-in mapping instead of manual mapping
     try {
-      // Use the exact column names from your database schema
+      console.log("Creating task with data:", insertTask);
+      
       const [task] = await db.insert(tasks).values({
-        title: taskToInsert.title,
-        description: taskToInsert.description,
-        status: taskToInsert.status,
-        user_id: taskToInsert.user_id, // Use snake_case
-        image_url: taskToInsert.image_url, // Use snake_case
-        created_at: taskToInsert.created_at, // Use snake_case
-        updated_at: taskToInsert.updated_at // Use snake_case
+        title: insertTask.title,
+        description: insertTask.description,
+        status: insertTask.status,
+        userId: insertTask.userId, // Use the field name from your schema, not the database column name
+        imageUrl: insertTask.imageUrl || null
       }).returning();
       
       return task;
@@ -175,37 +151,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
-    const update: Record<string, any> = { ...taskUpdate };
-    
-    if (update.status) {
-      if (['pending', 'in_progress', 'done'].includes(update.status)) {
-        update.status = update.status as "pending" | "in_progress" | "done";
-        update.updated_at = new Date();
-      } else {
-        delete update.status;
-      }
-    }
-    
-    if (update.userId) {
-      update.user_id = update.userId;
-      delete update.userId;
-    }
-    
-    if (update.imageUrl) {
-      update.image_url = update.imageUrl;
-      delete update.imageUrl;
-    }
-    
     const [updatedTask] = await db
       .update(tasks)
-      .set(update)
+      .set(taskUpdate)
       .where(eq(tasks.id, id))
       .returning();
     
     return updatedTask;
   }
   
-  async deleteTask(id: number): Promise极<boolean> {
+  async deleteTask(id: number): Promise<boolean> {
     await db.delete(comments).where(eq(comments.task_id, id));
     await db.delete(likes).where(eq(likes.task_id, id));
     
@@ -236,28 +191,21 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    const commentToInsert = {
-      content: insertComment.content,
-      user_id: insertComment.userId,
-      task_id: insertComment.taskId,
-      created_at: new Date()
-    };
-    
     const [comment] = await db
       .insert(comments)
-      .values(commentToInsert)
+      .values(insertComment)
       .returning();
     
     return comment;
   }
   
   async deleteComment(id: number): Promise<boolean> {
-    const [deletedComment极] = await db
+    const [deletedComment] = await db
       .delete(comments)
       .where(eq(comments.id, id))
       .returning();
     
-    return !!deletedComment;
+    return !!极deletedComment;
   }
   
   // Like methods
@@ -280,18 +228,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
-    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
+    const existingLike = await this.getLike(insertLike.user极Id, insertLike.taskId);
     if (existingLike) return existingLike;
-    
-    const likeToInsert = {
-      user_id: insertLike.userId,
-      task_id: insertLike.taskId,
-      created_at: new Date()
-    };
     
     const [like] = await db
       .insert(likes)
-      .values(likeToInsert)
+      .values(insertLike)
       .returning();
     
     return like;
@@ -313,7 +255,7 @@ export class DatabaseStorage implements IStorage {
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.get极User(userId);
+    const user = await this.getUser(userId);
     if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
@@ -335,7 +277,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
   
-  async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
+  async getPopularTasks(limit: number = 极5): Promise<TaskWithDetails[]> {
     const allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
