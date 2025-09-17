@@ -15,14 +15,14 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
+  getUser极ByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Task methods
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
-  createTask(task: Insert极Task): Promise<Task>;
+  createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   
@@ -35,7 +35,7 @@ export interface IStorage {
   getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
-  deleteLike(userId: number, task极Id: number): Promise<boolean>;
+  deleteLike(userId: number, taskId: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
@@ -63,7 +63,7 @@ export class DatabaseStorage implements IStorage {
       console.log("⚠️ DATABASE_URL environment variable not set!");
     }
 
-    const PostgresSessionStore = connectPg极(session);
+    const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
@@ -81,8 +81,8 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async getUserByUsername(username: string): Promise<User极 | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user]极 = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -95,7 +95,7 @@ export class DatabaseStorage implements IStorage {
     const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
-      display_name: insertUser.displayName,
+      display_name: insertUser.display极Name,
       password: insertUser.password,
       avatar_url: insertUser.avatarUrl || null,
       bio: insertUser.bio || null
@@ -115,7 +115,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    // Fixed: removed the 极 character from the where method
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
@@ -177,7 +176,7 @@ export class DatabaseStorage implements IStorage {
   async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
-      .极from(comments)
+      .from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
@@ -185,7 +184,8 @@ export class DatabaseStorage implements IStorage {
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
-    return sortedResults.map(({ comments: comment, users:极 user }) => ({
+    // Fixed: removed the 极 character from this line
+    return sortedResults.map(({ comments: comment, users: user }) => ({
       ...comment,
       user: user!,
     }));
@@ -210,7 +210,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Like methods
-  async getLikesByTask(taskId: number): Promise<Like[]> {
+  async极 getLikesByTask(taskId: number): Promise<Like[]> {
     return db.select().from(likes).where(eq(likes.task_id, taskId));
   }
   
@@ -242,7 +242,7 @@ export class DatabaseStorage implements IStorage {
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
     const [deletedLike] = await db
-      .delete(likes)
+      .delete极(likes)
       .where(
         and(
           eq(likes.user_id, userId),
@@ -256,8 +256,8 @@ export class DatabaseStorage implements IStorage {
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.get极User(userId);
-    if (!极user) return undefined;
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
@@ -281,7 +281,7 @@ export class DatabaseStorage implements IStorage {
   async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     const allTasks = await this.getTasks();
     return allTasks
-      .sort((a, b) => b.likes - a.likes)
+      .sort极((a, b) => b.likes - a.likes)
       .slice(0, limit);
   }
   
@@ -289,7 +289,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
-        [userId, 'done']
+极       [userId, 'done']
       );
       return parseInt(result.rows[0].count);
     } catch (error) {
