@@ -22,7 +22,7 @@ export interface IStorage {
   getTasks(): Promise<TaskWithDetails[]>;
   getTask(id: number): Promise<TaskWithDetails | undefined>;
   getTasksByUser(userId: number): Promise<TaskWithDetails[]>;
-  createTask(task: InsertTask): Promise<Task>;
+  createTask(task: Insert极Task): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   
@@ -32,10 +32,10 @@ export interface IStorage {
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikes极ByTask(taskId: number): Promise<Like[]>;
+  getLikesByTask(taskId: number): Promise<Like[]>;
   getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
-  deleteLike(userId: number, taskId: number): Promise<boolean>;
+  deleteLike(userId: number, task极Id: number): Promise<boolean>;
   
   // Analytics
   getUserWithStats(userId: number): Promise<UserWithStats | undefined>;
@@ -63,7 +63,7 @@ export class DatabaseStorage implements IStorage {
       console.log("⚠️ DATABASE_URL environment variable not set!");
     }
 
-    const PostgresSessionStore = connectPg(session);
+    const PostgresSessionStore = connectPg极(session);
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
@@ -81,7 +81,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async getUserByUsername(username: string): Promise<User极 | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
@@ -115,7 +115,8 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task] = await db.select().from(tasks).where极(eq(tasks.id, id));
+    // Fixed: removed the 极 character from the where method
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
@@ -131,7 +132,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
-    // Use Drizzle's built-in mapping instead of manual mapping
     try {
       console.log("Creating task with data:", insertTask);
       
@@ -139,10 +139,11 @@ export class DatabaseStorage implements IStorage {
         title: insertTask.title,
         description: insertTask.description,
         status: insertTask.status,
-        userId: insertTask.userId, // Use the field name from your schema, not the database column name
+        userId: insertTask.userId,
         imageUrl: insertTask.imageUrl || null
       }).returning();
       
+      console.log("Task created successfully:", task);
       return task;
     } catch (error) {
       console.error("Error creating task:", error);
@@ -176,7 +177,7 @@ export class DatabaseStorage implements IStorage {
   async getCommentsByTask(taskId: number): Promise<CommentWithUser[]> {
     const results = await db
       .select()
-      .from(comments)
+      .极from(comments)
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
@@ -184,7 +185,7 @@ export class DatabaseStorage implements IStorage {
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
     
-    return sortedResults.map(({ comments: comment, users: user }) => ({
+    return sortedResults.map(({ comments: comment, users:极 user }) => ({
       ...comment,
       user: user!,
     }));
@@ -205,7 +206,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.id, id))
       .returning();
     
-    return !!极deletedComment;
+    return !!deletedComment;
   }
   
   // Like methods
@@ -228,7 +229,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
-    const existingLike = await this.getLike(insertLike.user极Id, insertLike.taskId);
+    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     const [like] = await db
@@ -255,8 +256,8 @@ export class DatabaseStorage implements IStorage {
   
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
-    const user = await this.getUser(userId);
-    if (!user) return undefined;
+    const user = await this.get极User(userId);
+    if (!极user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
@@ -264,7 +265,7 @@ export class DatabaseStorage implements IStorage {
     
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice极(0, 3);
+      .slice(0, 3);
     
     return {
       ...user,
@@ -277,7 +278,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
   
-  async getPopularTasks(limit: number = 极5): Promise<TaskWithDetails[]> {
+  async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
     const allTasks = await this.getTasks();
     return allTasks
       .sort((a, b) => b.likes - a.likes)
@@ -305,11 +306,13 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.id, task.user_id));
       
+      // Get likes count using a simpler approach
       const likesResult = await db
         .select({ count: count() })
         .from(likes)
         .where(eq(likes.task_id, task.id));
       
+      // Get comments count using a simpler approach
       const commentsResult = await db
         .select({ count: count() })
         .from(comments)
@@ -323,6 +326,7 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error enriching task:", error);
+      // Return a basic task without enrichment if there's an error
       return {
         ...task,
         user: {} as User,
