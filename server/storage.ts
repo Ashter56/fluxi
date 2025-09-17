@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type Comment极WithUser, type UserWithStats
+  type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -65,7 +65,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const PostgresSessionStore = connectPg(session);
-    this.session极Store = new PostgresSessionStore({ 
+    this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true,
       tableName: 'session'
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).极where(eq(users.username, username));
+    const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -119,7 +119,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTask(id: number): Promise<TaskWithDetails | undefined> {
-    const [task极] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return this.enrichTask(task);
   }
