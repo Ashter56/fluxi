@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(sortedTasks);
   });
   
-  app.get("/api/tasks/pending-count", async (req: Request, res: Response)极 => {
+   app.get("/api/tasks/pending-count", async (req: Request, res: Response) => { 
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
