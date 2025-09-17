@@ -97,8 +97,8 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   likes: many(likes),
 }));
 
-export极 const commentsRelations = relations(comments, ({ one }) => ({
-  user: one(users, { fields: [comments.userId], references极: [users.id] }),
+export const commentsRelations = relations(comments, ({ one }) => ({
+  user: one(users, { fields: [comments.userId], references: [users.id] }),
   task: one(tasks, { fields: [comments.taskId], references: [tasks.id] }),
 }));
 
