@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  displayName: text("display_name").notNull(), // Fixed: removed the 极 character
+  displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -40,13 +40,12 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// FIX: Added userId to the insertTaskSchema
 export const insertTaskSchema = createInsertSchema(tasks).pick({
   title: true,
   description: true,
   status: true,
-  userId: true, // This was missing!
-  image极Url: true,
+  userId: true,
+  imageUrl: true,
 });
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
