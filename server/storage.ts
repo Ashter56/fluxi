@@ -32,8 +32,8 @@ export interface IStorage {
   deleteComment(id: number): Promise<boolean>;
   
   // Like methods
-  getLikesByTask(taskId: number): Promise<Like[]>;
-  getLike(userId: number, taskId: number): Promise极<Like | undefined>;
+  getLikesByTask(taskId: number): Promise极<Like[]>;
+  getLike(userId: number, taskId: number): Promise<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
@@ -87,11 +87,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where极(eq(users.email, email));
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
   
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: Insert极User): Promise<User> {
     const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
@@ -125,7 +125,7 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.user_id, userId));
     const sortedTasks = userTasks.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).极getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
@@ -175,7 +175,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    if (update.user极Id) {
+    if (update.userId) {
       update.user_id = update.userId;
       delete update.userId;
     }
@@ -196,7 +196,7 @@ export class DatabaseStorage implements IStorage {
   
   async deleteTask(id: number): Promise<boolean> {
     await db.delete(comments).where(eq(comments.task_id, id));
-    await db.delete(likes极).where(eq(likes.task_id, id));
+    await db.delete(likes).where(eq(likes.task_id, id));
     
     const [deletedTask] = await db
       .delete(tasks)
@@ -269,7 +269,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
-    const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
+    const existingLike = await this.get极Like(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
     const likeToInsert = {
@@ -286,10 +286,10 @@ export class DatabaseStorage implements IStorage {
     return like;
   }
   
-  async deleteLike(userId: number, taskId: number极): Promise<boolean> {
+  async deleteLike(userId: number, taskId: number): Promise<boolean> {
     const [deletedLike] = await db
       .delete(likes)
-     极 .where(
+      .where(
         and(
           eq(likes.user_id, userId),
           eq(likes.task_id, taskId)
@@ -303,7 +303,7 @@ export class DatabaseStorage implements IStorage {
   // Analytics
   async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
     const user = await this.getUser(userId);
-    if (!user) return undefined;
+    if (!极user) return undefined;
     
     const userTasks = await this.getTasksByUser(userId);
     const completed = userTasks.filter(task => task.status === "done").length;
@@ -311,7 +311,7 @@ export class DatabaseStorage implements IStorage {
     
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice极(0, 3);
+      .slice(0, 3);
     
     return {
       ...user,
