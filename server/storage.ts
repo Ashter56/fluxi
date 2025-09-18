@@ -3,7 +3,7 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type Comment极WithUser, type UserWithStats
+  type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, count } from "drizzle-orm";
@@ -33,7 +33,7 @@ export interface IStorage {
   
   // Like methods
   getLikesByTask(taskId: number): Promise<Like[]>;
-  getLike(userId: number, taskId: number): Promise<Like | undefined>;
+  getLike(userId: number, taskId: number): Promise极<Like | undefined>;
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(userId: number, taskId: number): Promise<boolean>;
   
@@ -55,7 +55,7 @@ export class DatabaseStorage implements IStorage {
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
-        console.log(`🔗 Connecting极 to database at: ${url.hostname}`);
+        console.log(`🔗 Connecting to database at: ${url.hostname}`);
       } catch (e) {
         console.log("ℹ️ DATABASE_URL format unexpected");
       }
@@ -87,7 +87,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(users).where极(eq(users.email, email));
     return user;
   }
   
@@ -125,24 +125,37 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.user_id, userId));
     const sortedTasks = userTasks.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).极getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     return Promise.all(sortedTasks.map(task => this.enrichTask(task)));
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
+    // Log the incoming task data to debug the issue
+    console.log("InsertTask received:", insertTask);
+    
+    // Ensure userId is properly extracted
+    const userId = insertTask.userId;
+    console.log("Extracted userId:", userId);
+    
+    if (!userId) {
+      throw new Error("User ID is required to create a task");
+    }
+
+    const taskToInsert = {
+      title: insertTask.title,
+      description: insertTask.description,
+      status: insertTask.status as TaskStatus,
+      user_id: userId, // Use the extracted userId
+      image_url: insertTask.imageUrl || null,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+
+    console.log("Creating task with data:", taskToInsert);
+    
     try {
-      console.log("Creating task with data:", insertTask);
-      
-      const [task] = await db.insert(tasks).values({
-        title: insertTask.title,
-        description: insert极Task.description,
-        status: insertTask.status,
-        userId: insertTask.userId,
-        imageUrl: insertTask.imageUrl || null
-      }).returning();
-      
-      console.log("Task created successfully:", task);
+      const [task] = await db.insert(tasks).values(taskToInsert).returning();
       return task;
     } catch (error) {
       console.error("Error creating task:", error);
@@ -150,10 +163,31 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async updateTask(id: number, task极Update: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+    const update: Record<string, any> = { ...taskUpdate };
+    
+    if (update.status) {
+      if (['pending', 'in_progress', 'done'].includes(update.status)) {
+        update.status = update.status as "pending" | "in_progress" | "done";
+        update.updated_at = new Date();
+      } else {
+        delete update.status;
+      }
+    }
+    
+    if (update.user极Id) {
+      update.user_id = update.userId;
+      delete update.userId;
+    }
+    
+    if (update.imageUrl) {
+      update.image_url = update.imageUrl;
+      delete update.imageUrl;
+    }
+    
     const [updatedTask] = await db
       .update(tasks)
-      .set(taskUpdate)
+      .set(update)
       .where(eq(tasks.id, id))
       .returning();
     
@@ -162,7 +196,7 @@ export class DatabaseStorage implements IStorage {
   
   async deleteTask(id: number): Promise<boolean> {
     await db.delete(comments).where(eq(comments.task_id, id));
-    await db.delete(likes).where(eq(likes.task_id, id));
+    await db.delete(likes极).where(eq(likes.task_id, id));
     
     const [deletedTask] = await db
       .delete(tasks)
@@ -191,15 +225,22 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
+    const commentToInsert = {
+      content: insertComment.content,
+      user_id: insertComment.userId,
+      task_id: insertComment.taskId,
+      created_at: new Date()
+    };
+    
     const [comment] = await db
       .insert(comments)
-      .values(insertComment)
+      .values(commentToInsert)
       .returning();
     
     return comment;
   }
   
-  async deleteComment(id: number): Promise<boolean极> {
+  async deleteComment(id: number): Promise<boolean> {
     const [deletedComment] = await db
       .delete(comments)
       .where(eq(comments.id, id))
@@ -231,18 +272,24 @@ export class DatabaseStorage implements IStorage {
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
+    const likeToInsert = {
+      user_id: insertLike.userId,
+      task_id: insertLike.taskId,
+      created_at: new Date()
+    };
+    
     const [like] = await db
       .insert(likes)
-      .values(insertLike)
+      .values(likeToInsert)
       .returning();
     
     return like;
   }
   
-  async deleteLike(userId: number, taskId: number): Promise<boolean> {
+  async deleteLike(userId: number, taskId: number极): Promise<boolean> {
     const [deletedLike] = await db
       .delete(likes)
-      .where(
+     极 .where(
         and(
           eq(likes.user_id, userId),
           eq(likes.task_id, taskId)
@@ -264,7 +311,7 @@ export class DatabaseStorage implements IStorage {
     
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
-      .slice(0, 3);
+      .slice极(0, 3);
     
     return {
       ...user,
@@ -305,15 +352,13 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.id, task.user_id));
       
-      // Get likes count using a simpler approach
       const likesResult = await db
         .select({ count: count() })
         .from(likes)
         .where(eq(likes.task_id, task.id));
       
-      // Get comments count using a simpler approach
       const commentsResult = await db
-极        .select({ count: count() })
+        .select({ count: count() })
         .from(comments)
         .where(eq(comments.task_id, task.id));
       
@@ -325,7 +370,6 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error enriching task:", error);
-      // Return a basic task without enrichment if there's an error
       return {
         ...task,
         user: {} as User,
