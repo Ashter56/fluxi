@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  displayName: text("display_name").极notNull(),
+  displayName: text("display_name").notNull(), // Fixed: removed the 极 character
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -46,7 +46,7 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   description: true,
   status: true,
   userId: true, // This was missing!
-  imageUrl: true,
+  image极Url: true,
 });
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
@@ -70,7 +70,7 @@ export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type Comment = typeof comments.$inferSelect;
 
 export const likes = pgTable("likes", {
-  id: serial极("id").primaryKey(),
+  id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   taskId: integer("task_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -92,7 +92,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  user极: one(users, { fields: [tasks.userId], references: [users.id] }),
+  user: one(users, { fields: [tasks.userId], references: [users.id] }),
   comments: many(comments),
   likes: many(likes),
 }));
