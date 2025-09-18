@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  displayName: text("display_name").notNull(),
+  displayName: text("display_name").极notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -70,7 +70,7 @@ export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type Comment = typeof comments.$inferSelect;
 
 export const likes = pgTable("likes", {
-  id: serial("id").primaryKey(),
+  id: serial极("id").primaryKey(),
   userId: integer("user_id").notNull(),
   taskId: integer("task_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -92,7 +92,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  user: one(users, { fields: [tasks.userId], references: [users.id] }),
+  user极: one(users, { fields: [tasks.userId], references: [users.id] }),
   comments: many(comments),
   likes: many(likes),
 }));
