@@ -3,10 +3,10 @@ import {
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
-  type TaskWithDetails, type Comment极WithUser, type UserWithStats
+  type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -52,6 +52,7 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     console.log("🛢️ Initializing DatabaseStorage...");
     
+    // Log database connection details (without password)
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
@@ -70,8 +71,9 @@ export class DatabaseStorage implements IStorage {
       tableName: 'session'
     });
 
+    // Add connection test
     pool.query('SELECT NOW() as db_time')
-      .then(res => console.log(`✅ Database test successful. Current DB time: ${极res.rows[0].db_time}`))
+      .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
   }
 
@@ -92,7 +94,8 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    const user极ToInsert = {
+    // Use snake_case column names that match the database schema
+    const userToInsert = {
       username: insertUser.username,
       email: insertUser.email,
       display_name: insertUser.displayName,
@@ -108,6 +111,7 @@ export class DatabaseStorage implements IStorage {
   // Task methods
   async getTasks(): Promise<TaskWithDetails[]> {
     const taskList = await db.select().from(tasks);
+    // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = taskList.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -124,6 +128,7 @@ export class DatabaseStorage implements IStorage {
     const userTasks = await db.select()
       .from(tasks)
       .where(eq(tasks.user_id, userId));
+    // Sort by most recently created first in JavaScript instead of SQL
     const sortedTasks = userTasks.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -131,22 +136,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
-    // Log the incoming task data to debug the issue
-    console.log("InsertTask received:", insertTask);
-    
-    // Ensure userId is properly extracted
-    const userId = insertTask.userId;
-    console.log("Extracted userId:", userId);
-    
-    if (!userId) {
-      throw new Error("User ID is required to create a task");
-    }
-
+    // Map JavaScript object properties to database column names
     const taskToInsert = {
       title: insertTask.title,
       description: insertTask.description,
       status: insertTask.status as TaskStatus,
-      user_id: userId, // Use the extracted userId
+      user_id: insertTask.userId,
       image_url: insertTask.imageUrl || null,
       created_at: new Date(),
       updated_at: new Date()
@@ -164,17 +159,24 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+    // Create a type-safe update object with correctly typed status
     const update: Record<string, any> = { ...taskUpdate };
     
+    // Handle the status field separately
     if (update.status) {
+      // Ensure status is a valid TaskStatus
       if (['pending', 'in_progress', 'done'].includes(update.status)) {
+        // Cast to appropriate type
         update.status = update.status as "pending" | "in_progress" | "done";
+        
+        // When status changes, update the updated_at timestamp
         update.updated_at = new Date();
       } else {
-        delete update.status;
+        delete update.status; // Remove invalid status
       }
     }
     
+    // Map camelCase to snake_case for database columns
     if (update.userId) {
       update.user_id = update.userId;
       delete update.userId;
@@ -182,7 +184,7 @@ export class DatabaseStorage implements IStorage {
     
     if (update.imageUrl) {
       update.image_url = update.imageUrl;
-      delete update.image极Url;
+      delete update.imageUrl;
     }
     
     const [updatedTask] = await db
@@ -195,10 +197,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteTask(id: number): Promise<boolean> {
+    // Delete associated comments
     await db.delete(comments).where(eq(comments.task_id, id));
+    
+    // Delete associated likes
     await db.delete(likes).where(eq(likes.task_id, id));
     
-    const [deletedTask]极 = await db
+    // Delete the task
+    const [deletedTask] = await db
       .delete(tasks)
       .where(eq(tasks.id, id))
       .returning();
@@ -214,6 +220,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(comments.user_id, users.id))
       .where(eq(comments.task_id, taskId));
     
+    // Sort by oldest first in JavaScript instead of SQL
     const sortedResults = results.sort((a, b) => 
       new Date(a.comments.created_at).getTime() - new Date(b.comments.created_at).getTime()
     );
@@ -225,6 +232,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createComment(insertComment: InsertComment): Promise<Comment> {
+    // Map camelCase to snake_case for database columns
     const commentToInsert = {
       content: insertComment.content,
       user_id: insertComment.userId,
@@ -269,9 +277,11 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
+    // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
     if (existingLike) return existingLike;
     
+    // Map camelCase to snake_case for database columns
     const likeToInsert = {
       user_id: insertLike.userId,
       task_id: insertLike.taskId,
@@ -309,6 +319,7 @@ export class DatabaseStorage implements IStorage {
     const completed = userTasks.filter(task => task.status === "done").length;
     const pending = userTasks.filter(task => task.status !== "done").length;
     
+    // Get popular tasks (most liked)
     const popularTasks = [...userTasks]
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 3);
@@ -324,15 +335,17 @@ export class DatabaseStorage implements IStorage {
     };
   }
   
-  async getPopularTasks(limit: number = 极5): Promise<TaskWithDetails[]> {
+  async getPopularTasks(limit: number = 5): Promise<TaskWithDetails[]> {
+    // Simple implementation without complex SQL
     const allTasks = await this.getTasks();
     return allTasks
-      .sort((a, b) => b.likes - a极.likes)
+      .sort((a, b) => b.likes - a.likes)
       .slice(0, limit);
   }
   
-  async getPendingTasksCount(user极Id: number): Promise<number> {
+  async getPendingTasksCount(userId: number): Promise<number> {
     try {
+      // Use a simple approach with raw SQL if Drizzle is causing issues
       const result = await pool.query(
         'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2',
         [userId, 'done']
@@ -344,7 +357,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // Helper methods - SIMPLIFIED VERSION TO FIX SYNTAX ERRORS
+  // Helper methods
   private async enrichTask(task: Task): Promise<TaskWithDetails> {
     try {
       const [user] = await db
@@ -352,25 +365,25 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.id, task.user_id));
       
-      // Simplified version without complex count queries
       const likesResult = await db
-        .select()
+        .select({ count: count() })
         .from(likes)
         .where(eq(likes.task_id, task.id));
       
       const commentsResult = await db
-        .select()
+        .select({ count: count() })
         .from(comments)
         .where(eq(comments.task_id, task.id));
       
       return {
         ...task,
         user: user!,
-        likes: likesResult.length,
-        comments: commentsResult.length
+        likes: likesResult[0]?.count ?? 0,
+        comments: commentsResult[0]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
+      // Return a basic task without enrichment if there's an error
       return {
         ...task,
         user: {} as User,
