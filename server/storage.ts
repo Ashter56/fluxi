@@ -334,19 +334,21 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, task.userId));
       
       // Use raw SQL for count queries to avoid syntax issues
-      const likesCount = await db.execute(
-        sql`SELECT COUNT(*) FROM likes WHERE task_id = ${task.id}`
+      const likesResult = await pool.query(
+        'SELECT COUNT(*) FROM likes WHERE task_id = $1',
+        [task.id]
       );
       
-      const commentsCount = await db.execute(
-        sql`SELECT COUNT(*) FROM comments WHERE task_id = ${task.id}`
+      const commentsResult = await pool.query(
+        'SELECT COUNT(*) FROM comments WHERE task_id = $1',
+        [task.id]
       );
       
       return {
         ...task,
         user: user!,
-        likes: parseInt(likesCount.rows[0]?.count || "0"),
-        comments: parseInt(commentsCount.rows[0]?.count || "0")
+        likes: parseInt(likesResult.rows[0]?.count || "0"),
+        comments: parseInt(commentsResult.rows[0]?.count || "0")
       };
     } catch (error) {
       console.error("Error enriching task:", error);
