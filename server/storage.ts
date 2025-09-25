@@ -1,4 +1,5 @@
 import { 
+import { 
   users, type User, type InsertUser,
   tasks, type Task, type InsertTask, type TaskStatus,
   comments, type Comment, type InsertComment,
@@ -6,7 +7,7 @@ import {
   type TaskWithDetails, type CommentWithUser, type UserWithStats
 } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, count, sql } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -52,7 +53,6 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     console.log("🛢️ Initializing DatabaseStorage...");
     
-    // Log database connection details (without password)
     if (process.env.DATABASE_URL) {
       try {
         const url = new URL(process.env.DATABASE_URL);
@@ -71,7 +71,6 @@ export class DatabaseStorage implements IStorage {
       tableName: 'session'
     });
 
-    // Add connection test
     pool.query('SELECT NOW() as db_time')
       .then(res => console.log(`✅ Database test successful. Current DB time: ${res.rows[0].db_time}`))
       .catch(err => console.error('❌ Database test failed:', err));
@@ -230,9 +229,9 @@ export class DatabaseStorage implements IStorage {
     return !!deletedComment;
   }
   
-  // Like methods
+  // Like methods - FIXED FOR LIKE BUTTON ISSUE
   async getLikesByTask(taskId: number): Promise<Like[]> {
-    return db.select().from(likes).where(eq(likes.taskId, taskId));
+    return await db.select().from(likes).where(eq(likes.taskId, taskId));
   }
   
   async getLike(userId: number, taskId: number): Promise<Like | undefined> {
@@ -250,14 +249,21 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createLike(insertLike: InsertLike): Promise<Like> {
+    // Check if already liked
     const existingLike = await this.getLike(insertLike.userId, insertLike.taskId);
-    if (existingLike) return existingLike;
+    if (existingLike) {
+      console.log("Like already exists, returning existing like");
+      return existingLike;
+    }
     
+    // Create new like
     const likeToInsert = {
       userId: insertLike.userId,
       taskId: insertLike.taskId,
       createdAt: new Date()
     };
+    
+    console.log("Creating new like:", likeToInsert);
     
     const [like] = await db
       .insert(likes)
@@ -268,6 +274,8 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteLike(userId: number, taskId: number): Promise<boolean> {
+    console.log(`Deleting like for user ${userId}, task ${taskId}`);
+    
     const [deletedLike] = await db
       .delete(likes)
       .where(
@@ -333,22 +341,21 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.id, task.userId));
       
-      // Use raw SQL for count queries to avoid syntax issues
-      const likesResult = await pool.query(
-        'SELECT COUNT(*) FROM likes WHERE task_id = $1',
-        [task.id]
-      );
+      const likesResult = await db
+        .select({ count: count() })
+        .from(likes)
+        .where(eq(likes.taskId, task.id));
       
-      const commentsResult = await pool.query(
-        'SELECT COUNT(*) FROM comments WHERE task_id = $1',
-        [task.id]
-      );
+      const commentsResult = await db
+        .select({ count: count() })
+        .from(comments)
+        .where(eq(comments.taskId, task.id));
       
       return {
         ...task,
         user: user!,
-        likes: parseInt(likesResult.rows[0]?.count || "0"),
-        comments: parseInt(commentsResult.rows[0]?.count || "0")
+        likes: likesResult[0]?.count ?? 0,
+        comments: commentsResult[0]?.count ?? 0
       };
     } catch (error) {
       console.error("Error enriching task:", error);
