@@ -1,349 +1,345 @@
-import type { Express, Request, Response } from "express";
-import { storage } from "./storage";
-import { z } from "zod";
-import {
-  insertUserSchema,
-  insertTaskSchema,
-  insertCommentSchema,
-  insertLikeSchema,
-  taskStatus,
-  type TaskStatus
-} from  "../shared/schema";
-import { configureAuth } from "./auth";
-import { broadcastMessage, WebSocketEvent } from "./websocket";
+import express from 'express';
+import { storage } from './storage';
+import { User } from '../shared/schema';
 
-export async function registerRoutes(app: Express): Promise<void> {
-  console.log("🛡️ Setting up authentication...");
-  configureAuth(app);
-  
-  console.log("🛣️ Setting up API routes...");
-  
-  // Users endpoints
-  app.get("/api/users/:userId", async (req: Request, res: Response) => {
-    const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) {
-      return res.status(400).json({ message: "Invalid user ID" });
+const app = express.Router();
+
+// Get current user
+app.get('/api/user', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json(req.user);
+  } else {
+    res.status(401).json({ message: 'Not authenticated' });
+  }
+});
+
+// Get current user with details
+app.get('/api/users/current', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
     }
-    
-    const user = await storage.getUser(user极Id);
+
+    const user = await storage.getUser((req.user as User).id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
+    // Remove password from response
     const { password, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
-  });
-  
-  app.get("/api/users/:userId/profile", async (req: Request, res: Response) => {
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get all tasks
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await storage.getTasks();
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    res.status(500).json({ message: 'Failed to fetch tasks' });
+  }
+});
+
+// Get tasks by user
+app.get('/api/tasks/user/:userId', async (req, res) => {
+  try {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
-      return res.status(400).json({ message: "Invalid user ID" });
+      return res.status(400).json({ message: 'Invalid user ID' });
     }
-    
-    const userWithStats = await storage.getUserWithStats(userId);
-    if (!userWithStats) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    
-    const { password, ...userWithoutPassword } = userWithStats;
-    res.json(userWithoutPassword);
-  });
-  
-  // Tasks endpoints
-  app.get("/api/tasks", async (req: Request, res: Response) => {
-    const tasks = await storage.getTasks();
-    
-    let tasksWithLikeStatus = tasks;
-    
-    if (req.isAuthenticated() && req.user) {
-      tasksWithLikeStatus = await Promise.all(
-        tasks.map(async (task) => {
-          const liked = await storage.getLike((req.user as any).id, task.id);
-          return { ...task, liked: !!liked };
-        })
-      );
-    } else {
-      tasksWithLikeStatus = tasks.map(task => ({ ...task, liked: false }));
-    }
-    
-    const sortedTasks = tasksWithLikeStatus.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    
-    res.json(sortedTasks);
-  });
-  
-   app.get("/api/tasks/pending-count", async (req: Request, res: Response) => { 
-    if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    const count = await storage.getPendingTasksCount((req.user as any).id);
-    res.json({ count });
-  });
-  
-  app.get("/api/tasks/:taskId", async (req: Request, res: Response) => {
+
+    const tasks = await storage.getTasksByUser(userId);
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching user tasks:', error);
+    res.status(500).json({ message: 'Failed to fetch user tasks' });
+  }
+});
+
+// Get single task
+app.get('/api/tasks/:taskId', async (req, res) => {
+  try {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID" });
+      return res.status(400).json({ message: 'Invalid task ID' });
     }
-    
+
     const task = await storage.getTask(taskId);
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: 'Task not found' });
     }
-    
-    let liked = false;
-    if (req.isAuthenticated() && req.user) {
-      const likeRecord = await storage.getLike((req.user as any).id, task.id);
-      liked = !!likeRecord;
-    }
-    
-    res.json({ ...task, liked });
-  });
-  
-  app.post("/api/tasks", async (req: Request, res: Response) => {
+
+    res.json(task);
+  } catch (error) {
+    console.error('Error fetching task:', error);
+    res.status(500).json({ message: 'Failed to fetch task' });
+  }
+});
+
+// Create task
+app.post('/api/tasks', async (req, res) => {
+  try {
     if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: 'Not authenticated' });
     }
+
+    const { title, description, status, imageUrl } = req.body;
     
-    try {
-      console.log("Creating task with data:", req.body);
-      console.log("User ID:", (req.user as any).id);
-      
-      // Create the task data with user ID first
-      const taskData = {
-        ...req.body,
-        userId: (req.user as any).id,
-      };
-      
-      console.log("Task data with user ID:", taskData);
-      
-      // Validate the complete task data
-      const validatedData = insertTaskSchema.parse(taskData);
-      
-      if (!taskStatus.safeParse(validatedData.status).success) {
-        return res.status(400).json({ message: "Invalid task status" });
-      }
-      
-      // Ensure userId is preserved after validation
-      const taskWithUserId = {
-        ...validatedData,
-        userId: (req.user as any).id
-      };
-      
-      const task = await storage.createTask(taskWithUserId);
-      console.log("Task created successfully:", task);
-      
-      try {
-        const fullTask = await storage.getTask(task.id);
-        console.log("Full task retrieved:", fullTask);
-        
-        try {
-          broadcastMessage(WebSocketEvent.NEW_TASK, fullTask);
-          console.log("WebSocket broadcast successful");
-        } catch (broadcastError) {
-          console.error("WebSocket broadcast error:", broadcastError);
-          // Don't fail the request if broadcasting fails
-        }
-        
-        return res.status(201).json(fullTask);
-      } catch (getTaskError) {
-        console.error("Error retrieving full task:", getTaskError);
-        // Still return the basic task if we can't get the full enriched task
-        return res.status(201).json(task);
-      }
-    } catch (error) {
-      console.error("Task creation error:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create task" });
+    if (!title || !status) {
+      return res.status(400).json({ message: 'Title and status are required' });
     }
-  });
-  
-  app.patch("/api/tasks/:taskId", async (req: Request, res: Response) => {
+
+    const taskData = {
+      title,
+      description,
+      status,
+      userId: (req.user as User).id,
+      imageUrl
+    };
+
+    console.log('Creating task with data:', taskData);
+    const task = await storage.createTask(taskData);
+    res.status(201).json(task);
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ message: 'Failed to create task' });
+  }
+});
+
+// Update task
+app.put('/api/tasks/:taskId', async (req, res) => {
+  try {
     if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: 'Not authenticated' });
     }
-    
+
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
-      return res.status(400).json({ message极: "Invalid task ID" });
+      return res.status(400).json({ message: 'Invalid task ID' });
     }
-    
-    try {
-      const task = await storage.getTask(taskId);
-      if (!task) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-      
-      if (task.userId !== (req.user as any).id) {
-        return res.status(403).json({ message: "You cannot update this task" });
-      }
-      
-      const taskUpdateSchema = insertTaskSchema.partial();
-      const taskUpdate = taskUpdateSchema.parse(req.body);
-      
-      if (taskUpdate.status && !taskStatus.safeParse(taskUpdate.status).success) {
-        return res.status(400).json({ message: "Invalid task status" });
-      }
-      
-      if (taskUpdate.status) {
-        taskUpdate.status = taskUpdate.status as TaskStatus;
-      }
-      
-      const updatedTask = await storage.updateTask(taskId, taskUpdate);
-      
-      if (taskUpdate.status) {
-        const fullTask = await storage.getTask(taskId);
-        if (fullTask) {
-          broadcastMessage(WebSocketEvent.TASK_STATUS_UPDATE, fullTask);
-        }
-      }
-      
-      res.json(updatedTask);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update task" });
-    }
-  });
-  
-  app.delete("/api/tasks/:taskId", async (req: Request, res: Response) => {
-    if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    const taskId = parseInt(req.params.taskId);
-    if (isNaN(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID" });
-    }
-    
+
     const task = await storage.getTask(taskId);
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: 'Task not found' });
     }
-    
-    const isAdmin = (req.user as any).username === "ashterabbas";
-    if (task.userId !== (req.user as any).id && !isAdmin) {
-      return res.status(403).json({ message: "You cannot delete this task" });
+
+    // Check if user owns the task
+    if (task.user.id !== (req.user as User).id) {
+      return res.status(403).json({ message: 'Not authorized to update this task' });
     }
-    
+
+    const updatedTask = await storage.updateTask(taskId, req.body);
+    res.json(updatedTask);
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ message: 'Failed to update task' });
+  }
+});
+
+// Delete task
+app.delete('/api/tasks/:taskId', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const taskId = parseInt(req.params.taskId);
+    if (isNaN(taskId)) {
+      return res.status(400).json({ message: 'Invalid task ID' });
+    }
+
+    const task = await storage.getTask(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if user owns the task
+    if (task.user.id !== (req.user as User).id) {
+      return res.status(403).json({ message: 'Not authorized to delete this task' });
+    }
+
     const success = await storage.deleteTask(taskId);
-    if (success) {
-      res.status(204).end();
-    } else {
-      res.status(500).json({ message: "Failed to delete task" });
+    res.json({ success });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ message: 'Failed to delete task' });
+  }
+});
+
+// Like a task
+app.post('/api/tasks/:taskId/like', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
     }
-  });
-  
-  // Comments endpoints
-  app.get("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
+
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID" });
+      return res.status(400).json({ message: 'Invalid task ID' });
     }
-    
+
+    const userId = (req.user as User).id;
+    const like = await storage.createLike({ userId, taskId });
+    res.json(like);
+  } catch (error) {
+    console.error('Error liking task:', error);
+    res.status(500).json({ message: 'Failed to like task' });
+  }
+});
+
+// Unlike a task
+app.delete('/api/tasks/:taskId/like', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const taskId = parseInt(req.params.taskId);
+    if (isNaN(taskId)) {
+      return res.status(400).json({ message: 'Invalid task ID' });
+    }
+
+    const userId = (req.user as User).id;
+    const success = await storage.deleteLike(userId, taskId);
+    res.json({ success });
+  } catch (error) {
+    console.error('Error unliking task:', error);
+    res.status(500).json({ message: 'Failed to unlike task' });
+  }
+});
+
+// Get task likes
+app.get('/api/tasks/:taskId/likes', async (req, res) => {
+  try {
+    const taskId = parseInt(req.params.taskId);
+    if (isNaN(taskId)) {
+      return res.status(400).json({ message: 'Invalid task ID' });
+    }
+
+    const likes = await storage.getLikesByTask(taskId);
+    res.json(likes);
+  } catch (error) {
+    console.error('Error fetching task likes:', error);
+    res.status(500).json({ message: 'Failed to fetch task likes' });
+  }
+});
+
+// Get comments for a task
+app.get('/api/tasks/:taskId/comments', async (req, res) => {
+  try {
+    const taskId = parseInt(req.params.taskId);
+    if (isNaN(taskId)) {
+      return res.status(400).json({ message: 'Invalid task ID' });
+    }
+
     const comments = await storage.getCommentsByTask(taskId);
     res.json(comments);
-  });
-  
-  app.post("/api/tasks/:taskId/comments", async (req: Request, res: Response) => {
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Failed to fetch comments' });
+  }
+});
+
+// Add comment to a task
+app.post('/api/tasks/:taskId/comments', async (req, res) => {
+  try {
     if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: 'Not authenticated' });
     }
-    
+
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID" });
+      return res.status(400).json({ message: 'Invalid task ID' });
     }
-    
-    try {
-      const task = await storage.getTask(taskId);
-      if (!task) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-      
-      const commentData = insertCommentSchema.parse({
-        ...req.body,
-        userId: (req.user as any).id,
-        taskId
-      });
-      
-      const comment = await storage.createComment(commentData);
-      const commentWithUser = {
-        ...comment,
-        user: await storage.getUser(comment.userId)
-      };
-      
-      res.status(201).json(commentWithUser);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status极(400).json({ message: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create comment" });
+
+    const { content } = req.body;
+    if (!content) {
+      return res.status(400).json({ message: 'Comment content is required' });
     }
-  });
-  
-  // Likes endpoints
-  app.post("/api/tasks/:taskId/like", async (req: Request, res: Response) => {
+
+    const comment = await storage.createComment({
+      content,
+      userId: (req.user as User).id,
+      taskId
+    });
+
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    res.status(500).json({ message: 'Failed to create comment' });
+  }
+});
+
+// Delete comment
+app.delete('/api/comments/:commentId', async (req, res) => {
+  try {
     if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: 'Not authenticated' });
     }
-    
-    const taskId = parseInt(req.params.taskId);
-    if (isNaN(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID" });
+
+    const commentId = parseInt(req.params.commentId);
+    if (isNaN(commentId)) {
+      return res.status(400).json({ message: 'Invalid comment ID' });
     }
-    
-    try {
-      const task = await storage.getTask(taskId);
-      if (!极task) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-      
-      const existingLike = await storage.getLike((req.user as any).id, taskId);
-      if (existingLike) {
-        await storage.deleteLike((req.user as any).id, taskId);
-        const updatedTask = await storage.getTask(taskId);
-        
-        if (updatedTask) {
-          broadcastMessage(WebSocketEvent.LIKE, {
-            ...updatedTask,
-            liked: false,
-            action: 'unlike'
-          });
-        }
-        
-        return res.json({ ...updatedTask, liked: false });
-      }
-      
-      const likeData = insertLikeSchema.parse({
-        userId: (req.user as any).id,
-        taskId
-      });
-      
-      await storage.createLike(likeData);
-      const updatedTask = await storage.getTask(taskId);
-      
-      if (updatedTask) {
-        broadcastMessage(WebSocketEvent.LIKE, {
-          ...updatedTask,
-          liked: true,
-          action: 'like'
-        });
-      }
-      
-      res.json({ ...updatedTask, liked: true });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      res.status(500).json({ message: "Failed to like/unlike task" });
+
+    const success = await storage.deleteComment(commentId);
+    res.json({ success });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ message: 'Failed to delete comment' });
+  }
+});
+
+// Get pending tasks count for current user
+app.get('/api/tasks/pending-count', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
     }
-  });
-  
-  console.log("✅ All routes registered successfully");
-}
+
+    const count = await storage.getPendingTasksCount((req.user as User).id);
+    res.json({ count });
+  } catch (error) {
+    console.error('Error fetching pending tasks count:', error);
+    res.status(500).json({ message: 'Failed to fetch pending tasks count' });
+  }
+});
+
+// Get popular tasks
+app.get('/api/tasks/popular', async (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+    const tasks = await storage.getPopularTasks(limit);
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching popular tasks:', error);
+    res.status(500).json({ message: 'Failed to fetch popular tasks' });
+  }
+});
+
+// Get user stats
+app.get('/api/users/:userId/stats', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const userStats = await storage.getUserWithStats(userId);
+    if (!userStats) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(userStats);
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ message: 'Failed to fetch user stats' });
+  }
+});
+
+export default app;
