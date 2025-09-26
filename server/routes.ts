@@ -293,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const task极Id = parseInt(req.params.taskId);
+    const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
       return res.status(400).json({ message: "Invalid task ID" });
     }
