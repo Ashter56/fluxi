@@ -4,7 +4,11 @@ import http from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
-import { registerRoutes } from './routes.ts';
+import session from 'express-session';
+import passport from 'passport';
+import { setupAuth } from './auth.js';
+import { storage } from './storage.js';
+import router from './routes.js';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -61,14 +65,33 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallback-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  store: storage.sessionStore,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Setup authentication
+setupAuth();
+
 // Add request logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Configure routes
-registerRoutes(app);
+// Use the routes
+app.use(router);
 
 // Client paths
 const projectRoot = path.join(__dirname, "../..");
@@ -118,8 +141,22 @@ app.get("*", (req, res) => {
   res.sendFile(indexPath);
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 // Start server directly without database test
 const server = http.createServer(app);
 server.listen(port, "0.0.0.0", () => {
   console.log(`✅ Server started on port ${port}`);
+});
+
+// Database connection test
+storage.sessionStore.on('connect', () => {
+  console.log('✅ Database connection established');
+});
+
+storage.sessionStore.on('disconnect', () => {
+  console.log('❌ Database connection lost');
 });
