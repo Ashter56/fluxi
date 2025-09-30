@@ -2,10 +2,10 @@ import express from 'express';
 import { storage } from './storage';
 import { User } from '../shared/schema';
 
-const app = express.Router();
+const router = express.Router();
 
 // Get current user
-app.get('/api/user', (req, res) => {
+router.get('/api/user', (req, res) => {
   if (req.isAuthenticated()) {
     res.json(req.user);
   } else {
@@ -14,7 +14,7 @@ app.get('/api/user', (req, res) => {
 });
 
 // Get current user with details
-app.get('/api/users/current', async (req, res) => {
+router.get('/api/users/current', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -35,7 +35,7 @@ app.get('/api/users/current', async (req, res) => {
 });
 
 // Get all tasks
-app.get('/api/tasks', async (req, res) => {
+router.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await storage.getTasks();
     res.json(tasks);
@@ -46,7 +46,7 @@ app.get('/api/tasks', async (req, res) => {
 });
 
 // Get tasks by user
-app.get('/api/tasks/user/:userId', async (req, res) => {
+router.get('/api/tasks/user/:userId', async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
@@ -62,7 +62,7 @@ app.get('/api/tasks/user/:userId', async (req, res) => {
 });
 
 // Get single task
-app.get('/api/tasks/:taskId', async (req, res) => {
+router.get('/api/tasks/:taskId', async (req, res) => {
   try {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
@@ -82,7 +82,7 @@ app.get('/api/tasks/:taskId', async (req, res) => {
 });
 
 // Create task
-app.post('/api/tasks', async (req, res) => {
+router.post('/api/tasks', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -112,7 +112,7 @@ app.post('/api/tasks', async (req, res) => {
 });
 
 // Update task
-app.put('/api/tasks/:taskId', async (req, res) => {
+router.put('/api/tasks/:taskId', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -142,7 +142,7 @@ app.put('/api/tasks/:taskId', async (req, res) => {
 });
 
 // Delete task
-app.delete('/api/tasks/:taskId', async (req, res) => {
+router.delete('/api/tasks/:taskId', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -172,7 +172,7 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
 });
 
 // Like a task
-app.post('/api/tasks/:taskId/like', async (req, res) => {
+router.post('/api/tasks/:taskId/like', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -193,7 +193,7 @@ app.post('/api/tasks/:taskId/like', async (req, res) => {
 });
 
 // Unlike a task
-app.delete('/api/tasks/:taskId/like', async (req, res) => {
+router.delete('/api/tasks/:taskId/like', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -214,7 +214,7 @@ app.delete('/api/tasks/:taskId/like', async (req, res) => {
 });
 
 // Get task likes
-app.get('/api/tasks/:taskId/likes', async (req, res) => {
+router.get('/api/tasks/:taskId/likes', async (req, res) => {
   try {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
@@ -230,7 +230,7 @@ app.get('/api/tasks/:taskId/likes', async (req, res) => {
 });
 
 // Get comments for a task
-app.get('/api/tasks/:taskId/comments', async (req, res) => {
+router.get('/api/tasks/:taskId/comments', async (req, res) => {
   try {
     const taskId = parseInt(req.params.taskId);
     if (isNaN(taskId)) {
@@ -246,7 +246,7 @@ app.get('/api/tasks/:taskId/comments', async (req, res) => {
 });
 
 // Add comment to a task
-app.post('/api/tasks/:taskId/comments', async (req, res) => {
+router.post('/api/tasks/:taskId/comments', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -276,7 +276,7 @@ app.post('/api/tasks/:taskId/comments', async (req, res) => {
 });
 
 // Delete comment
-app.delete('/api/comments/:commentId', async (req, res) => {
+router.delete('/api/comments/:commentId', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -296,7 +296,7 @@ app.delete('/api/comments/:commentId', async (req, res) => {
 });
 
 // Get pending tasks count for current user
-app.get('/api/tasks/pending-count', async (req, res) => {
+router.get('/api/tasks/pending-count', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -311,7 +311,7 @@ app.get('/api/tasks/pending-count', async (req, res) => {
 });
 
 // Get popular tasks
-app.get('/api/tasks/popular', async (req, res) => {
+router.get('/api/tasks/popular', async (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
     const tasks = await storage.getPopularTasks(limit);
@@ -323,7 +323,7 @@ app.get('/api/tasks/popular', async (req, res) => {
 });
 
 // Get user stats
-app.get('/api/users/:userId/stats', async (req, res) => {
+router.get('/api/users/:userId/stats', async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
@@ -342,4 +342,5 @@ app.get('/api/users/:userId/stats', async (req, res) => {
   }
 });
 
-export default app;
+// Export the router
+export default router;
