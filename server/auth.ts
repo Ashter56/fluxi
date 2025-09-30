@@ -8,7 +8,7 @@ import { User } from '../shared/schema';
 
 const MemoryStore = memorystore(session);
 
-export function configureAuth(app: express.Application) {
+export function setupAuth(app: express.Application) {
   // Session configuration
   app.use(session({
     secret: process.env.SESSION_SECRET || 'default-secret-key',
